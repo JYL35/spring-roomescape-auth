@@ -357,6 +357,41 @@
             box-shadow: var(--shadow-hover);
         }
 
+        .auth-panel {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+            gap: 8px;
+            align-items: center;
+            min-width: 420px;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: rgba(247, 240, 230, 0.95);
+            box-shadow: 0 8px 22px rgba(31, 41, 51, 0.05);
+        }
+
+        .auth-panel input {
+            width: 100%;
+            height: 40px;
+            padding: 0 10px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fffaf2;
+            color: var(--text);
+        }
+
+        .auth-panel .button {
+            height: 40px;
+            white-space: nowrap;
+        }
+
+        .auth-user {
+            grid-column: 1 / -1;
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.4;
+        }
+
         .button:active:not(:disabled) {
             transform: translateY(0);
         }
@@ -617,6 +652,12 @@
                 margin-top: 16px;
             }
 
+            .auth-panel {
+                grid-template-columns: 1fr;
+                min-width: 0;
+                margin-top: 16px;
+            }
+
             .section + .section {
                 margin-top: 20px;
             }
@@ -656,6 +697,12 @@
         <div class="status" data-tone="neutral" id="statusCard">
             <span id="statusMessage">페이지를 불러오는 중입니다.</span>
         </div>
+        <form class="auth-panel" id="loginForm">
+            <input autocomplete="username" id="loginId" placeholder="로그인 ID" required type="text">
+            <input autocomplete="current-password" id="loginPassword" placeholder="비밀번호" required type="password">
+            <button class="button primary" type="submit">로그인</button>
+            <div class="auth-user" id="loginStatus">로그인 후 예약할 수 있습니다.</div>
+        </form>
     </header>
 
     <nav class="navigation">
@@ -709,11 +756,6 @@
                         <input id="reservationDate" required type="date">
                     </div>
 
-                    <div class="field">
-                        <label for="reservationName">예약자 이름</label>
-                        <input id="reservationName" maxlength="255" placeholder="예: 브라운" type="text">
-                    </div>
-
                     <div class="button-row">
                         <button class="button secondary" id="loadTimesButton" type="button">가능 시간 조회</button>
                         <button class="button primary" disabled id="reserveButton" type="button">예약하기</button>
@@ -751,13 +793,10 @@
         <section class="section">
             <div class="section-header">
                 <h2 class="section-title">내 예약 조회</h2>
-                <p class="section-copy">예약자 이름으로 예약 내역을 조회합니다.</p>
+                <p class="section-copy">로그인한 사용자의 예약 내역을 조회합니다.</p>
             </div>
             <div class="form">
-                <form id="searchReservationForm" class="field" style="display: flex; gap: 10px;">
-                    <input type="text" id="searchName" placeholder="예약자 이름 입력" required style="flex: 1;">
-                    <button type="submit" class="button secondary" style="width: auto; padding: 0 20px;">조회</button>
-                </form>
+                <button type="button" id="searchReservationButton" class="button secondary">내 예약 조회</button>
             </div>
             <div class="admin-section" style="margin-bottom: 0;">
                 <table id="myReservationTable">
@@ -851,7 +890,6 @@
         <div class="modal-content">
             <h2 class="section-title" style="margin-bottom: 20px;">예약 수정</h2>
             <input type="hidden" id="editReservationId">
-            <input type="hidden" id="editReservationName">
 
             <div class="field">
                 <label for="editThemeSelect">테마 변경</label>
@@ -892,8 +930,14 @@
     const API_ADMIN_TIMES = '/api/v1/admin/times';
     const API_RESERVATIONS = '/api/v1/reservations';
     const API_ADMIN_RESERVATIONS = '/api/v1/admin/reservations';
+    const API_LOGIN = '/api/v1/login';
+
+    const authState = {
+        member: null
+    };
 
     document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById('loginForm').addEventListener('submit', login);
         reservationNav.addEventListener('click', () => showPage('reservation'));
         myReservationNav.addEventListener('click', () => showPage('my-reservation'));
         adminNav.addEventListener('click', () => showPage('admin'));
@@ -921,9 +965,35 @@
         } else if (pageName === 'my-reservation') {
             myReservationPage.classList.remove('hidden');
             myReservationNav.classList.add('active');
+            if (authState.member) {
+                searchMyReservations();
+            }
         } else {
             reservationPage.classList.remove('hidden');
             reservationNav.classList.add('active');
+        }
+    }
+
+    async function login(e) {
+        e.preventDefault();
+        const loginId = document.getElementById('loginId').value.trim();
+        const password = document.getElementById('loginPassword').value;
+
+        try {
+            const response = await fetch(API_LOGIN, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({loginId, password})
+            });
+            await checkResponse(response, '로그인에 실패했습니다.');
+            authState.member = await response.json();
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginStatus').textContent = `${authState.member.name}님으로 로그인했습니다.`;
+            setStatus('로그인했습니다.', 'success');
+        } catch (error) {
+            authState.member = null;
+            document.getElementById('loginStatus').textContent = '로그인 후 예약할 수 있습니다.';
+            setStatus(error.message, 'error');
         }
     }
 
@@ -956,16 +1026,15 @@
     };
 
     function initializeMyReservationPage() {
-        document.getElementById('searchReservationForm').addEventListener('submit', searchMyReservations);
+        document.getElementById('searchReservationButton').addEventListener('click', searchMyReservations);
         document.getElementById('editDate').addEventListener('change', loadEditAvailableTimes);
         document.getElementById('editThemeSelect').addEventListener('change', loadEditAvailableTimes);
     }
 
     async function searchMyReservations(e) {
         if (e) e.preventDefault();
-        const searchName = document.getElementById('searchName').value.trim();
-        if (!searchName) {
-            setStatus("예약자 이름을 입력해주세요.", "error");
+        if (!authState.member) {
+            setStatus("로그인 후 내 예약을 조회할 수 있습니다.", "error");
             return;
         }
 
@@ -974,7 +1043,7 @@
         const emptyMessage = document.getElementById('myReservationEmpty');
 
         try {
-            const response = await fetch(`${API_RESERVATIONS}?name=${encodeURIComponent(searchName)}`);
+            const response = await fetch(`${API_RESERVATIONS}/mine`);
             await checkResponse(response, "예약 내역 조회에 실패했습니다.");
             const reservations = await response.json();
 
@@ -997,8 +1066,8 @@
                         <td>${escapeHtml(res.date)}</td>
                         <td>${escapeHtml(timeStartAt)}</td>
                         <td>
-                            <button onclick="openEditModal(${res.id}, '${escapeHtml(searchName)}', '${res.date}', ${themeId}, ${timeId})" class="button secondary" style="margin-right: 4px;">수정</button>
-                            <button onclick="deleteMyReservation(${res.id}, '${escapeHtml(searchName)}')" class="button secondary">삭제</button>
+                            <button onclick="openEditModal(${res.id}, '${res.date}', ${themeId}, ${timeId})" class="button secondary" style="margin-right: 4px;">수정</button>
+                            <button onclick="deleteMyReservation(${res.id})" class="button secondary">삭제</button>
                         </td>
                     `;
                     tbody.appendChild(tr);
@@ -1013,9 +1082,8 @@
     }
 
     // 수정 모달 열기
-    function openEditModal(id, name, date, themeId, timeId) {
+    function openEditModal(id, date, themeId, timeId) {
         document.getElementById('editReservationId').value = id;
-        document.getElementById('editReservationName').value = name;
         document.getElementById('editDate').value = date;
 
         // 테마 셀렉트박스 채우기
@@ -1079,7 +1147,6 @@
     // 예약 수정 요청
     async function updateMyReservation() {
         const id = document.getElementById('editReservationId').value;
-        const name = document.getElementById('editReservationName').value;
         const date = document.getElementById('editDate').value;
         const themeId = document.getElementById('editThemeSelect').value;
         const timeId = editState.selectedTimeId;
@@ -1088,7 +1155,7 @@
             const response = await fetch(`${API_RESERVATIONS}/${id}`, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name, date, timeId, themeId })
+                body: JSON.stringify({ date, timeId, themeId })
             });
             await checkResponse(response, "예약 수정에 실패했습니다.");
 
@@ -1101,10 +1168,10 @@
         }
     }
 
-    async function deleteMyReservation(id, name) {
+    async function deleteMyReservation(id) {
         if (!confirm("정말로 예약을 취소하시겠습니까?")) return;
         try {
-            const response = await fetch(`${API_RESERVATIONS}/${id}?name=${encodeURIComponent(name)}`, {
+            const response = await fetch(`${API_RESERVATIONS}/${id}`, {
                 method: 'DELETE'
             });
             await checkResponse(response, "예약 취소에 실패했습니다.");
@@ -1133,7 +1200,6 @@
     const themeList = document.getElementById("themeList");
     const themeEmpty = document.getElementById("themeEmpty");
     const reservationDateInput = document.getElementById("reservationDate");
-    const reservationNameInput = document.getElementById("reservationName");
     const loadTimesButton = document.getElementById("loadTimesButton");
     const reserveButton = document.getElementById("reserveButton");
     const timeGrid = document.getElementById("timeGrid");
@@ -1333,18 +1399,19 @@
     }
 
     async function createReservation() {
-        const name = reservationNameInput.value.trim();
-        if (!name) { setStatus("이름을 입력하세요.", "error"); return; }
+        if (!authState.member) {
+            setStatus("로그인 후 예약할 수 있습니다.", "error");
+            return;
+        }
         reserveButton.disabled = true;
         try {
             const response = await fetch(API_RESERVATIONS, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, date: reservationDateInput.value, timeId: state.selectedTimeId, themeId: state.selectedThemeId })
+                body: JSON.stringify({ date: reservationDateInput.value, timeId: state.selectedTimeId, themeId: state.selectedThemeId })
             });
             await checkResponse(response, "예약 생성 실패");
             const res = await response.json();
-            reservationNameInput.value = "";
             setStatus(`예약 완료! 번호: ${res.id}`, "success");
             loadAvailableTimes();
             loadPopularThemes();
@@ -1460,7 +1527,7 @@
     }
 
     function loadAdminReservations() {
-        fetchAndRender(API_RESERVATIONS, 'reservationTable', res => `<tr><td>${res.id}</td><td>${escapeHtml(res.name)}</td><td>${res.date}</td><td>${res.time ? res.time.startAt : ''}</td><td>${res.theme ? res.theme.name : ''}</td><td><button onclick="deleteAdminReservation(${res.id})" class="button secondary">삭제</button></td></tr>`);
+        fetchAndRender(API_RESERVATIONS, 'reservationTable', res => `<tr><td>${res.id}</td><td>${escapeHtml(res.member ? res.member.name : '')}</td><td>${res.date}</td><td>${res.time ? res.time.startAt : ''}</td><td>${res.theme ? res.theme.name : ''}</td><td><button onclick="deleteAdminReservation(${res.id})" class="button secondary">삭제</button></td></tr>`);
     }
 </script>
 </body>
