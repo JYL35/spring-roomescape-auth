@@ -63,6 +63,17 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthentication(AuthenticationException e,
+                                                              HttpServletRequest request) {
+        return createErrorResponse(
+                HttpStatus.UNAUTHORIZED,
+                e.getMessage(),
+                "AUTHENTICATION_FAILED",
+                request.getRequestURI()
+        );
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(MethodArgumentNotValidException e,
                                                                       HttpServletRequest request) {

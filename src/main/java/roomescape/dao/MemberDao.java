@@ -1,6 +1,7 @@
 package roomescape.dao;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import roomescape.domain.Member;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public class MemberDao {
@@ -33,6 +35,15 @@ public class MemberDao {
     public Member findById(Long id) {
         String sql = "SELECT * FROM member WHERE id = ?";
         return jdbcTemplate.queryForObject(sql, memberRowMapper, id);
+    }
+
+    public Optional<Member> findByLoginId(String loginId) {
+        String sql = "SELECT * FROM member WHERE login_id = ?";
+        try {
+            return Optional.ofNullable(jdbcTemplate.queryForObject(sql, memberRowMapper, loginId));
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
     }
 
     public List<Member> findAllByIds(List<Long> memberIds) {
