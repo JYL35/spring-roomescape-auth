@@ -15,6 +15,7 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static roomescape.auth.TestAuthSupport.login;
 
 @ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
@@ -45,6 +46,7 @@ public class ReservationControllerTest {
     @Test
     void 예약_추가() {
         RestAssured.given().log().all()
+                .filter(login("brown"))
                 .contentType(ContentType.JSON)
                 .body(reservationParams())
                 .when().post("/api/v1/reservations")
@@ -59,6 +61,7 @@ public class ReservationControllerTest {
     @Test
     void 예약_추가_시_예약_날짜가_과거라면_400을_반환한다() {
         RestAssured.given().log().all()
+                .filter(login("brown"))
                 .contentType(ContentType.JSON)
                 .body(reservationParams(Map.of("date", "2026-01-01")))
                 .when().post("/api/v1/reservations")
@@ -75,6 +78,7 @@ public class ReservationControllerTest {
         invalidParams.put("themeId", 1);
 
         RestAssured.given().log().all()
+                .filter(login("brown"))
                 .contentType(ContentType.JSON)
                 .body(invalidParams)
                 .when().post("/api/v1/reservations")
@@ -91,6 +95,7 @@ public class ReservationControllerTest {
         params.put("memberId", 1);
 
         RestAssured.given().log().all()
+                .filter(login("brown"))
                 .contentType(ContentType.JSON)
                 .body(params)
                 .when().post("/api/v1/reservations")
@@ -134,6 +139,7 @@ public class ReservationControllerTest {
         createReservation(reservationParams(Map.of("memberId", 3, "timeId", 2, "themeId", 1)));
 
         RestAssured.given().log().all()
+                .filter(login("bri"))
                 .when().get("/api/v1/reservations?memberId=1")
                 .then().log().all()
                 .statusCode(200)
@@ -146,6 +152,7 @@ public class ReservationControllerTest {
         createReservation(reservationParams());
 
         RestAssured.given().log().all()
+                .filter(login("brown"))
                 .when().delete("/api/v1/reservations/1?memberId=3")
                 .then().log().all()
                 .statusCode(204);
@@ -207,6 +214,7 @@ public class ReservationControllerTest {
     @Test
     void 형식이_잘못된_JSON을_전달하면_400을_반환한다() {
         RestAssured.given().log().all()
+                .filter(login("brown"))
                 .contentType(ContentType.JSON)
                 .body("{ \"memberId\": 3, \"date\": \"2026-12-31\", \"timeId\": 1, \"themeId\": 1") // 닫는 괄호 누락
                 .when().post("/api/v1/reservations")
@@ -218,6 +226,7 @@ public class ReservationControllerTest {
     @Test
     void 지원하지_않는_미디어_타입으로_요청하면_415를_반환한다() {
         RestAssured.given().log().all()
+                .filter(login("brown"))
                 .contentType(ContentType.TEXT)
                 .body("plain text body")
                 .when().post("/api/v1/reservations")
@@ -229,6 +238,7 @@ public class ReservationControllerTest {
     @Test
     void 요청_파라미터가_빈값이면_400을_반환한다() {
         RestAssured.given().log().all()
+                .filter(login("brown"))
                 .queryParam("memberId", "")
                 .when().get("/api/v1/reservations")
                 .then().log().all()
@@ -248,6 +258,7 @@ public class ReservationControllerTest {
         updateParams.put("themeId", 1);
 
         RestAssured.given().log().all()
+                .filter(login("brown"))
                 .contentType(ContentType.JSON)
                 .body(updateParams)
                 .when().put("/api/v1/reservations/1")
@@ -300,6 +311,7 @@ public class ReservationControllerTest {
 
     private void createReservation(Map<String, Object> params) {
         RestAssured.given().log().all()
+                .filter(login("brown"))
                 .contentType(ContentType.JSON)
                 .body(params)
                 .when().post("/api/v1/reservations");

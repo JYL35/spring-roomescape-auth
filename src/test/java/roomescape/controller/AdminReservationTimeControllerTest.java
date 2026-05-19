@@ -15,6 +15,7 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static roomescape.auth.TestAuthSupport.login;
 
 @ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
@@ -72,6 +73,7 @@ public class AdminReservationTimeControllerTest {
         createReservation(reservationParams());
 
         RestAssured.given().log().all()
+                .filter(login("brown"))
                 .contentType(ContentType.JSON)
                 .body(reservationParams(Map.of("timeId", 2)))
                 .when().post("/api/v1/reservations")
@@ -85,6 +87,7 @@ public class AdminReservationTimeControllerTest {
         createReservation(reservationParams());
 
         RestAssured.given().log().all()
+                .filter(login("brown"))
                 .contentType(ContentType.JSON)
                 .body(reservationParams(Map.of("timeId", 1)))
                 .when().post("/api/v1/reservations")
@@ -99,6 +102,7 @@ public class AdminReservationTimeControllerTest {
         createReservation(reservationParams());
 
         RestAssured.given().log().all()
+                .filter(login("brown"))
                 .contentType(ContentType.JSON)
                 .body(reservationParams(Map.of("themeId", 2)))
                 .when().post("/api/v1/reservations")
@@ -200,6 +204,7 @@ public class AdminReservationTimeControllerTest {
 
     private void createReservation(Map<String, Object> params) {
         RestAssured.given().log().all()
+                .filter(login("brown"))
                 .contentType(ContentType.JSON)
                 .body(params)
                 .when().post("/api/v1/reservations");

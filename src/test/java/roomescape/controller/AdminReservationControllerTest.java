@@ -14,6 +14,7 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static roomescape.auth.TestAuthSupport.login;
 
 @ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
@@ -103,6 +104,7 @@ public class AdminReservationControllerTest {
 
     private void createReservation(Map<String, Object> params) {
         RestAssured.given().log().all()
+                .filter(login("brown"))
                 .contentType(ContentType.JSON)
                 .body(params)
                 .when().post("/api/v1/reservations");
