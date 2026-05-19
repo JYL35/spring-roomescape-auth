@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import roomescape.domain.Reservation;
@@ -32,19 +33,22 @@ public class ReservationTimeDaoTest {
     private ReservationTimeDao reservationTimeDao;
     private ReservationDao reservationDao;
     private ThemeDao themeDao;
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired
-    public ReservationTimeDaoTest(ReservationTimeDao reservationTimeDao, ReservationDao reservationDao, ThemeDao themeDao) {
+    public ReservationTimeDaoTest(ReservationTimeDao reservationTimeDao, ReservationDao reservationDao, ThemeDao themeDao, JdbcTemplate jdbcTemplate) {
         this.reservationTimeDao = reservationTimeDao;
         this.reservationDao = reservationDao;
         this.themeDao = themeDao;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Test
     void 예약에서_사용중인_시간을_삭제하면_예외가_발생한다() {
         Long timeId = reservationTimeDao.insertReservationTime(ReservationTime.from(LocalTime.of(10, 0)));
         Long themeId = themeDao.insertTheme(Theme.from("이든의 하우스", "설명", "링크"));
-        reservationDao.insertReservation(Reservation.from("이든", LocalDate.of(2026, 5, 6), timeId, themeId));
+        Long memberId = insertMember("eden", "이든");
+        reservationDao.insertReservation(Reservation.from(memberId, LocalDate.of(2026, 5, 6), timeId, themeId));
 
         assertThatThrownBy(() -> reservationTimeDao.delete(timeId))
                 .isInstanceOf(ReservationTimeInUseException.class)
@@ -67,5 +71,13 @@ public class ReservationTimeDaoTest {
         assertThatThrownBy(() -> reservationTimeDao.findById(1L))
                 .isInstanceOf(ReservationTimeNotFoundException.class)
                 .hasMessage("해당 시간을 찾을 수 없습니다.");
+    }
+
+    private Long insertMember(String loginId, String name) {
+        jdbcTemplate.update(
+                "INSERT INTO member (login_id, password, name, role) VALUES (?, ?, ?, ?)",
+                loginId, "password123", name, "USER"
+        );
+        return jdbcTemplate.queryForObject("SELECT id FROM member WHERE login_id = ?", Long.class, loginId);
     }
 }

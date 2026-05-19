@@ -2,9 +2,11 @@ package roomescape.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import roomescape.dao.MemberDao;
 import roomescape.dao.ReservationDao;
 import roomescape.dao.ReservationTimeDao;
 import roomescape.dao.ThemeDao;
+import roomescape.domain.Member;
 import roomescape.domain.Reservation;
 import roomescape.domain.ReservationTime;
 import roomescape.domain.Theme;
@@ -26,6 +28,7 @@ import static org.mockito.Mockito.when;
 public class ReservationServiceTest {
 
     private ReservationDao reservationDao;
+    private MemberDao memberDao;
     private ReservationTimeDao reservationTimeDao;
     private ThemeDao themeDao;
     private ReservationService reservationService;
@@ -33,21 +36,24 @@ public class ReservationServiceTest {
     @BeforeEach
     void setUp() {
         reservationDao = mock(ReservationDao.class);
+        memberDao = mock(MemberDao.class);
         reservationTimeDao = mock(ReservationTimeDao.class);
         themeDao = mock(ThemeDao.class);
-        reservationService = new ReservationService(reservationDao, reservationTimeDao, themeDao);
+        reservationService = new ReservationService(reservationDao, memberDao, reservationTimeDao, themeDao);
     }
 
     @Test
     void 예약_생성_테스트() {
         long generatedId = 1L;
         LocalDate date = LocalDate.now().plusDays(1);
+        Member member = Member.from(1L, "eden", "password123", "이든", "USER");
         ReservationTime time = ReservationTime.from(1L, LocalTime.of(10, 0));
         Theme theme = Theme.from(1L, "테마", "설명", "url");
-        ReservationCreateRequest request = new ReservationCreateRequest("이든", date, 1L, 1L);
-        Reservation savedReservation = Reservation.from(generatedId, "이든", date, 1L, 1L);
+        ReservationCreateRequest request = new ReservationCreateRequest(1L, date, 1L, 1L);
+        Reservation savedReservation = Reservation.from(generatedId, 1L, date, 1L, 1L);
 
         when(reservationTimeDao.findById(1L)).thenReturn(time);
+        when(memberDao.findById(1L)).thenReturn(member);
         when(themeDao.findById(1L)).thenReturn(theme);
         when(reservationDao.insertReservation(any(Reservation.class))).thenReturn(generatedId);
         when(reservationDao.findReservationById(generatedId)).thenReturn(savedReservation);
@@ -55,7 +61,7 @@ public class ReservationServiceTest {
         ReservationResponse actual = reservationService.createReservation(request);
 
         assertThat(actual.id()).isEqualTo(generatedId);
-        assertThat(actual.name()).isEqualTo("이든");
+        assertThat(actual.member().name()).isEqualTo("이든");
         assertThat(actual.theme().name()).isEqualTo("테마");
     }
 
@@ -63,7 +69,7 @@ public class ReservationServiceTest {
     void 지나간_날짜와_시간에_대한_예약_생성은_불가능하다() {
         LocalDate date = LocalDate.of(2020, 1, 1);
         ReservationTime time = ReservationTime.from(1L, LocalTime.of(10, 0));
-        ReservationCreateRequest request = new ReservationCreateRequest("이든", date, 1L, 1L);
+        ReservationCreateRequest request = new ReservationCreateRequest(1L, date, 1L, 1L);
 
         when(reservationTimeDao.findById(1L)).thenReturn(time);
 

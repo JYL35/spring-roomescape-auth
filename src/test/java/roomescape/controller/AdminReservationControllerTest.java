@@ -3,7 +3,9 @@ package roomescape.controller;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -18,8 +20,12 @@ import static org.hamcrest.Matchers.is;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class AdminReservationControllerTest {
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     @Test
     void 예약_삭제() {
+        createMember(3L, "brown", "브라운");
         createTime("10:00");
         createTheme("이든의 공포 하우스", "이든이 귀신으로 나옴");
         createReservation(reservationParams());
@@ -68,7 +74,7 @@ public class AdminReservationControllerTest {
 
     private Map<String, Object> reservationParams() {
         Map<String, Object> params = new HashMap<>();
-        params.put("name", "브라운");
+        params.put("memberId", 3);
         params.put("date", "2026-12-31");
         params.put("timeId", 1);
         params.put("themeId", 1);
@@ -100,5 +106,12 @@ public class AdminReservationControllerTest {
                 .contentType(ContentType.JSON)
                 .body(params)
                 .when().post("/api/v1/reservations");
+    }
+
+    private void createMember(Long id, String loginId, String name) {
+        jdbcTemplate.update(
+                "INSERT INTO member (id, login_id, password, name, role) VALUES (?, ?, ?, ?, ?)",
+                id, loginId, "password123", name, "USER"
+        );
     }
 }

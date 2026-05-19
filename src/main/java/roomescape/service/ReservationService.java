@@ -1,11 +1,14 @@
 package roomescape.service;
 
+import jakarta.annotation.Nonnull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import roomescape.dao.MemberDao;
 import roomescape.dao.ReservationDao;
 import roomescape.dao.ReservationTimeDao;
 import roomescape.dao.ThemeDao;
+import roomescape.domain.Member;
 import roomescape.domain.Reservation;
 import roomescape.domain.ReservationTime;
 import roomescape.domain.Theme;
@@ -27,46 +30,35 @@ import java.util.stream.Collectors;
 public class ReservationService {
 
     private final ReservationDao reservationDao;
+    private final MemberDao memberDao;
     private final ReservationTimeDao reservationTimeDao;
     private final ThemeDao themeDao;
 
     @Autowired
-    public ReservationService(ReservationDao reservationDao, ReservationTimeDao reservationTimeDao, ThemeDao themeDao) {
+    public ReservationService(ReservationDao reservationDao, MemberDao memberDao, ReservationTimeDao reservationTimeDao, ThemeDao themeDao) {
         this.reservationDao = reservationDao;
+        this.memberDao = memberDao;
         this.reservationTimeDao = reservationTimeDao;
         this.themeDao = themeDao;
     }
 
     public List<ReservationResponse> getReservations() {
         List<Reservation> reservations = reservationDao.findAllReservations();
-        if (reservations.isEmpty()) {
-            return List.of();
-        }
-        List<Long> timeIds = reservations.stream().map(Reservation::getTimeId).toList();
-        List<Long> themeIds = reservations.stream().map(Reservation::getThemeId).toList();
-        Map<Long, ReservationTime> timeMap = reservationTimeDao.findAllByIds(timeIds)
-                .stream().collect(Collectors.toMap(ReservationTime::getId, Function.identity()));
-        Map<Long, Theme> themeMap = themeDao.findAllByIds(themeIds)
-                .stream().collect(Collectors.toMap(Theme::getId, Function.identity()));
-        return reservations.stream()
-                .map(reservation -> ReservationResponse.from(
-                        reservation,
-                        timeMap.get(reservation.getTimeId()),
-                        themeMap.get(reservation.getThemeId())
-                )).toList();
+        return buildReservationResponses(reservations);
     }
 
     @Transactional
     public ReservationResponse createReservation(ReservationCreateRequest request) {
-        Reservation reservation = Reservation.from(request.name(), request.date(), request.timeId(), request.themeId());
+        Reservation reservation = Reservation.from(request.memberId(), request.date(), request.timeId(), request.themeId());
         ReservationTime time = reservationTimeDao.findById(request.timeId());
         reservation.validateNotPast(LocalDateTime.of(request.date(), time.getStartAt()));
 
         Long id = reservationDao.insertReservation(reservation);
         Reservation newReservation = reservationDao.findReservationById(id);
+        Member member = memberDao.findById(newReservation.getMemberId());
         Theme theme = themeDao.findById(newReservation.getThemeId());
 
-        return ReservationResponse.from(newReservation, time, theme);
+        return ReservationResponse.from(newReservation, member, time, theme);
     }
 
     @Transactional
@@ -89,40 +81,60 @@ public class ReservationService {
         return AvailableTimeResponse.from(reservationTimeMap);
     }
 
-    public List<ReservationResponse> getUserReservations(String name) {
-        List<Reservation> reservations = reservationDao.findUserReservations(name);
-        if (reservations.isEmpty()) {
-            return List.of();
-        }
-        List<Long> timeIds = reservations.stream().map(Reservation::getTimeId).toList();
-        List<Long> themeIds = reservations.stream().map(Reservation::getThemeId).toList();
-        Map<Long, ReservationTime> timeMap = reservationTimeDao.findAllByIds(timeIds)
-                .stream().collect(Collectors.toMap(ReservationTime::getId, Function.identity()));
-        Map<Long, Theme> themeMap = themeDao.findAllByIds(themeIds)
-                .stream().collect(Collectors.toMap(Theme::getId, Function.identity()));
-        return reservations.stream()
-                .map(reservation -> ReservationResponse.from(
-                        reservation,
-                        timeMap.get(reservation.getTimeId()),
-                        themeMap.get(reservation.getThemeId())
-                )).toList();
+    public List<ReservationResponse> getUserReservations(Long memberId) {
+        List<Reservation> reservations = reservationDao.findUserReservations(memberId);
+        return buildReservationResponses(reservations);
     }
 
     @Transactional
-    public void deleteUserReservation(Long id, String name) {
+    public void deleteUserReservation(Long id, Long memberId) {
         Reservation reservation = reservationDao.findReservationById(id);
         ReservationTime time = reservationTimeDao.findById(reservation.getTimeId());
         reservation.validateNotPast(LocalDateTime.of(reservation.getDate(), time.getStartAt()));
-        int deleteCount = reservationDao.deleteUserReservation(id, name);
+        int deleteCount = reservationDao.deleteUserReservation(id, memberId);
         Reservation.validateDeletion(deleteCount);
     }
 
     @Transactional
     public void updateUserReservation(Long id, ReservationUpdateRequest request) {
         ReservationTime time = reservationTimeDao.findById(request.timeId());
-        Reservation reservation = Reservation.from(id, request.name(), request.date(), request.timeId(), request.themeId());
+        Reservation reservation = Reservation.from(id, request.memberId(), request.date(), request.timeId(), request.themeId());
         reservation.validateNotPast(LocalDateTime.of(request.date(), time.getStartAt()));
         int updateCount = reservationDao.update(id, reservation);
         Reservation.validateDeletion(updateCount);
+    }
+
+    private List<ReservationResponse> buildReservationResponses(List<Reservation> reservations) {
+        if (reservations.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Member> memberMap = getMemberMap(reservations);
+        Map<Long, ReservationTime> timeMap = getReservationTimeMap(reservations);
+        Map<Long, Theme> themeMap = getThemeMap(reservations);
+        return reservations.stream()
+                .map(reservation -> ReservationResponse.from(
+                        reservation,
+                        memberMap.get(reservation.getMemberId()),
+                        timeMap.get(reservation.getTimeId()),
+                        themeMap.get(reservation.getThemeId())
+                )).toList();
+    }
+
+    private Map<Long, Member> getMemberMap(List<Reservation> reservations) {
+        List<Long> memberIds = reservations.stream().map(Reservation::getMemberId).toList();
+        return memberDao.findAllByIds(memberIds)
+                .stream().collect(Collectors.toMap(Member::getId, Function.identity()));
+    }
+
+    private Map<Long, ReservationTime> getReservationTimeMap(List<Reservation> reservations) {
+        List<Long> timeIds = reservations.stream().map(Reservation::getTimeId).toList();
+        return reservationTimeDao.findAllByIds(timeIds)
+                .stream().collect(Collectors.toMap(ReservationTime::getId, Function.identity()));
+    }
+
+    private Map<Long, Theme> getThemeMap(List<Reservation> reservations) {
+        List<Long> themeIds = reservations.stream().map(Reservation::getThemeId).toList();
+        return themeDao.findAllByIds(themeIds)
+                .stream().collect(Collectors.toMap(Theme::getId, Function.identity()));
     }
 }

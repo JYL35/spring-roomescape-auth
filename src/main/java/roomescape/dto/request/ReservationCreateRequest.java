@@ -8,8 +8,8 @@ import java.time.LocalDate;
 
 public record ReservationCreateRequest(
 
-        @NotBlank(message = "예약자 이름은 필수로 입력해야 합니다.")
-        String name,
+        @NotNull(message = "회원 ID는 필수로 입력해야 합니다.")
+        Long memberId,
 
         @JsonFormat(pattern = "yyyy-MM-dd")
         @NotNull(message = "날짜는 필수로 입력해야 합니다.")

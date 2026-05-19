@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import roomescape.domain.Reservation;
@@ -31,12 +32,14 @@ public class ReservationDaoTest {
     private final ReservationTimeDao reservationTimeDao;
     private final ReservationDao reservationDao;
     private final ThemeDao themeDao;
+    private final JdbcTemplate jdbcTemplate;
 
     @Autowired
-    public ReservationDaoTest(ReservationTimeDao reservationTimeDao, ReservationDao reservationDao, ThemeDao themeDao) {
+    public ReservationDaoTest(ReservationTimeDao reservationTimeDao, ReservationDao reservationDao, ThemeDao themeDao, JdbcTemplate jdbcTemplate) {
         this.reservationTimeDao = reservationTimeDao;
         this.reservationDao = reservationDao;
         this.themeDao = themeDao;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Test
@@ -44,7 +47,8 @@ public class ReservationDaoTest {
         Long themeId = themeDao.insertTheme(Theme.from("테마", "설명", "url"));
         Long timeId = reservationTimeDao.insertReservationTime(ReservationTime.from(LocalTime.of(15, 30)));
         LocalDate date = LocalDate.of(2026, 5, 6);
-        Reservation reservation = Reservation.from("이든", date, timeId, themeId);
+        Long memberId = insertMember("eden", "이든");
+        Reservation reservation = Reservation.from(memberId, date, timeId, themeId);
         reservationDao.insertReservation(reservation);
 
         assertThatThrownBy(() -> reservationDao.insertReservation(reservation))
@@ -56,14 +60,23 @@ public class ReservationDaoTest {
     void 예약_조회_매핑_테스트() {
         Long themeId = themeDao.insertTheme(Theme.from("테마", "설명", "url"));
         Long timeId = reservationTimeDao.insertReservationTime(ReservationTime.from(LocalTime.of(15, 30)));
-        Reservation reservationToSave = Reservation.from("이든", LocalDate.of(2026, 5, 5), timeId, themeId);
+        Long memberId = insertMember("eden", "이든");
+        Reservation reservationToSave = Reservation.from(memberId, LocalDate.of(2026, 5, 5), timeId, themeId);
         Long reservationId = reservationDao.insertReservation(reservationToSave);
 
         Reservation reservation = reservationDao.findReservationById(reservationId);
 
-        assertThat(reservation.getName()).isEqualTo("이든");
+        assertThat(reservation.getMemberId()).isEqualTo(memberId);
         assertThat(reservation.getTimeId()).isEqualTo(timeId);
         assertThat(reservation.getThemeId()).isEqualTo(themeId);
         assertThat(reservation.getDate()).isEqualTo(LocalDate.of(2026, 5, 5));
+    }
+
+    private Long insertMember(String loginId, String name) {
+        jdbcTemplate.update(
+                "INSERT INTO member (login_id, password, name, role) VALUES (?, ?, ?, ?)",
+                loginId, "password123", name, "USER"
+        );
+        return jdbcTemplate.queryForObject("SELECT id FROM member WHERE login_id = ?", Long.class, loginId);
     }
 }

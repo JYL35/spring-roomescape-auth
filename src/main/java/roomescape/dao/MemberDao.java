@@ -39,7 +39,7 @@ public class MemberDao {
         if (memberIds.isEmpty()) {
             return List.of();
         }
-        String sql = "SELECT * FROM theme WHERE id IN (:memberIds)";
+        String sql = "SELECT * FROM member WHERE id IN (:memberIds)";
         MapSqlParameterSource parameters = new MapSqlParameterSource("memberIds", memberIds);
         return namedParameterJdbcTemplate.query(sql, parameters, memberRowMapper);
     }

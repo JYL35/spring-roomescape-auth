@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
@@ -39,6 +40,9 @@ public class ThemeDaoTest {
 
     @Autowired
     private ReservationDao reservationDao;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void 테마_생성_테스트() {
@@ -75,7 +79,8 @@ public class ThemeDaoTest {
     void 예약이_존재하는_테마_삭제_시_예외_발생() {
         Long themeId = themeDao.insertTheme(Theme.from("이든의 공포 하우스", "이든이 귀신으로 나오는 공포 테마", "image.jpg"));
         Long timeId = reservationTimeDao.insertReservationTime(ReservationTime.from(LocalTime.of(10, 0)));
-        reservationDao.insertReservation(Reservation.from("이든", LocalDate.of(2026, 5, 6), timeId, themeId));
+        Long memberId = insertMember("eden", "이든");
+        reservationDao.insertReservation(Reservation.from(memberId, LocalDate.of(2026, 5, 6), timeId, themeId));
 
         assertThatThrownBy(() -> themeDao.delete(themeId))
                 .isInstanceOf(ThemeInUseException.class)
@@ -106,5 +111,13 @@ public class ThemeDaoTest {
         assertThat(popularThemes)
                 .extracting(PopularTheme::rank)
                 .containsExactly(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L);
+    }
+
+    private Long insertMember(String loginId, String name) {
+        jdbcTemplate.update(
+                "INSERT INTO member (login_id, password, name, role) VALUES (?, ?, ?, ?)",
+                loginId, "password123", name, "USER"
+        );
+        return jdbcTemplate.queryForObject("SELECT id FROM member WHERE login_id = ?", Long.class, loginId);
     }
 }

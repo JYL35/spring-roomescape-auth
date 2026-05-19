@@ -52,8 +52,8 @@ public class ReservationController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUserReservation(
             @PathVariable @NotNull(message = "예약 ID는 필수로 입력해야 합니다.") Long id,
-            @RequestParam @NotBlank(message = "예약자 이름은 필수로 입력해야 합니다.") String name) {
-        reservationService.deleteUserReservation(id, name);
+            @RequestParam @NotNull(message = "회원 ID는 필수로 입력해야 합니다.") Long memberId) {
+        reservationService.deleteUserReservation(id, memberId);
         return ResponseEntity.noContent().build();
     }
 
@@ -65,10 +65,10 @@ public class ReservationController {
         return ResponseEntity.ok().body(availableTimeResponses);
     }
 
-    @GetMapping(params = {"name"})
+    @GetMapping(params = {"memberId"})
     public ResponseEntity<List<ReservationResponse>> getUserReservations(
-            @RequestParam @NotBlank(message = "예약자 이름은 필수로 입력해야 합니다.") String name) {
-        List<ReservationResponse> reservationResponses = reservationService.getUserReservations(name);
+            @RequestParam @NotNull(message = "회원 ID는 필수로 입력해야 합니다.") Long memberId) {
+        List<ReservationResponse> reservationResponses = reservationService.getUserReservations(memberId);
         return ResponseEntity.ok().body(reservationResponses);
     }
 

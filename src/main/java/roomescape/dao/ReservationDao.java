@@ -26,7 +26,7 @@ public class ReservationDao {
 
     private final RowMapper<Reservation> reservationRowMapper = (resultSet, rowNum) -> Reservation.from(
             resultSet.getLong("id"),
-            resultSet.getString("name"),
+            resultSet.getLong("member_id"),
             LocalDate.parse(resultSet.getString("date")),
             resultSet.getLong("time_id"),
             resultSet.getLong("theme_id")
@@ -43,13 +43,13 @@ public class ReservationDao {
     }
 
     public Long insertReservation(Reservation reservation) {
-        String sql = "INSERT INTO reservation (name, date, time_id, theme_id) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO reservation (member_id, date, time_id, theme_id) VALUES (?, ?, ?, ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         try {
             jdbcTemplate.update(connection -> {
                 PreparedStatement ps = connection.prepareStatement(sql, new String[]{"id"});
-                ps.setString(1, reservation.getName());
+                ps.setLong(1, reservation.getMemberId());
                 ps.setString(2, reservation.getDate().toString());
                 ps.setLong(3, reservation.getTimeId());
                 ps.setLong(4, reservation.getThemeId());
@@ -68,8 +68,8 @@ public class ReservationDao {
         return jdbcTemplate.update("DELETE FROM reservation WHERE id = ?", id);
     }
 
-    public int deleteUserReservation(Long id, String name) {
-        return jdbcTemplate.update("DELETE FROM reservation WHERE id = ? AND name = ?", id, name);
+    public int deleteUserReservation(Long id, Long memberId) {
+        return jdbcTemplate.update("DELETE FROM reservation WHERE id = ? AND member_id = ?", id, memberId);
     }
 
     public List<Long> findReservationTimeIds(LocalDate date, Long themeId) {
@@ -77,15 +77,15 @@ public class ReservationDao {
         return jdbcTemplate.queryForList(sql, Long.class, date, themeId);
     }
 
-    public List<Reservation> findUserReservations(String name) {
-        String sql = "SELECT * FROM reservation WHERE name = ?";
-        return jdbcTemplate.query(sql, reservationRowMapper, name);
+    public List<Reservation> findUserReservations(Long memberId) {
+        String sql = "SELECT * FROM reservation WHERE member_id = ?";
+        return jdbcTemplate.query(sql, reservationRowMapper, memberId);
     }
 
     public int update(Long id, Reservation reservation) {
         try {
-            String sql = "UPDATE reservation SET date = ?, time_id = ?, theme_id = ? WHERE id = ?";
-            return jdbcTemplate.update(sql, reservation.getDate(), reservation.getTimeId(), reservation.getThemeId(), id);
+            String sql = "UPDATE reservation SET member_id = ?, date = ?, time_id = ?, theme_id = ? WHERE id = ?";
+            return jdbcTemplate.update(sql, reservation.getMemberId(), reservation.getDate(), reservation.getTimeId(), reservation.getThemeId(), id);
         } catch (DuplicateKeyException e) {
             throw new ReservationAlreadyExistsException("해당 날짜, 시간, 테마에 대한 예약이 이미 존재합니다.");
         }

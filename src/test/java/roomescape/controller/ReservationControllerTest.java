@@ -5,6 +5,8 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -19,8 +21,14 @@ import static org.hamcrest.Matchers.is;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class ReservationControllerTest {
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     @BeforeEach
     void setUp() {
+        createMember(1L, "bri", "브리");
+        createMember(2L, "eden", "이든");
+        createMember(3L, "brown", "브라운");
         createTime("10:00");
         createTheme("이든의 공포 하우스", "이든이 귀신으로 나옴");
     }
@@ -62,7 +70,7 @@ public class ReservationControllerTest {
     @Test
     void 예약_추가_시_필수_파라미터가_누락되면_400을_반환한다() {
         Map<String, Object> invalidParams = new HashMap<>();
-        invalidParams.put("name", "브라운");
+        invalidParams.put("memberId", 3);
         invalidParams.put("timeId", 1);
         invalidParams.put("themeId", 1);
 
@@ -80,7 +88,7 @@ public class ReservationControllerTest {
     void 예약_추가_시_해당_날짜_시간_테마에_예약이_있다면_409를_반환한다() {
         Map<String, Object> params = reservationParams();
         createReservation(params);
-        params.put("name", "브리");
+        params.put("memberId", 1);
 
         RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
@@ -96,7 +104,7 @@ public class ReservationControllerTest {
     void 예약_목록_조회() {
         createReservation(reservationParams());
         createTime("11:00");
-        createReservation(reservationParams(Map.of("name", "브리", "timeId", 2, "themeId", 1)));
+        createReservation(reservationParams(Map.of("memberId", 1, "timeId", 2, "themeId", 1)));
 
         RestAssured.given().log().all()
                 .when().get("/api/v1/reservations")
@@ -104,33 +112,33 @@ public class ReservationControllerTest {
                 .statusCode(200)
                 .body("size()", is(2))
                 .body("[0].id", is(1))
-                .body("[0].name", is("브라운"))
+                .body("[0].member.name", is("브라운"))
                 .body("[0].date", is("2026-12-31"))
                 .body("[0].time.id", is(1))
                 .body("[0].time.startAt", is("10:00"))
                 .body("[0].theme.id", is(1))
                 .body("[0].theme.name", is("이든의 공포 하우스"))
                 .body("[1].id", is(2))
-                .body("[1].name", is("브리"))
+                .body("[1].member.name", is("브리"))
                 .body("[1].date", is("2026-12-31"))
                 .body("[1].time.id", is(2))
                 .body("[1].time.startAt", is("11:00"))
                 .body("[1].theme.id", is(1))
                 .body("[1].theme.name", is("이든의 공포 하우스"));
     }
-    
+
     @Test
     void 사용자_이름으로_예약_목록_조회() {
-        createReservation(reservationParams(Map.of("name", "브리")));
+        createReservation(reservationParams(Map.of("memberId", 1)));
         createTime("11:00");
-        createReservation(reservationParams(Map.of("name", "브라운", "timeId", 2, "themeId", 1)));
+        createReservation(reservationParams(Map.of("memberId", 3, "timeId", 2, "themeId", 1)));
 
         RestAssured.given().log().all()
-                .when().get("/api/v1/reservations?name=브리")
+                .when().get("/api/v1/reservations?memberId=1")
                 .then().log().all()
                 .statusCode(200)
                 .body("size()", is(1))
-                .body("[0].name", is("브리"));
+                .body("[0].member.name", is("브리"));
     }
 
     @Test
@@ -138,7 +146,7 @@ public class ReservationControllerTest {
         createReservation(reservationParams());
 
         RestAssured.given().log().all()
-                .when().delete("/api/v1/reservations/1?name=브라운")
+                .when().delete("/api/v1/reservations/1?memberId=3")
                 .then().log().all()
                 .statusCode(204);
         RestAssured.given().log().all()
@@ -151,7 +159,7 @@ public class ReservationControllerTest {
     @Test
     void 예약_삭제_시_잘못된_타입의_ID를_전달하면_400을_반환한다() {
         RestAssured.given().log().all()
-                .when().delete("/api/v1/reservations/invalid-id?name=브라운")
+                .when().delete("/api/v1/reservations/invalid-id?memberId=3")
                 .then().log().all()
                 .statusCode(400)
                 .body("status", is(400))
@@ -162,7 +170,7 @@ public class ReservationControllerTest {
     @Test
     void 예약_삭제_시_ID를_입력하지_않으면_404를_반환한다() {
         RestAssured.given().log().all()
-                .when().delete("/api/v1/reservations/?name=브라운")
+                .when().delete("/api/v1/reservations/?memberId=3")
                 .then().log().all()
                 .statusCode(404)
                 .body("status", is(404))
@@ -200,7 +208,7 @@ public class ReservationControllerTest {
     void 형식이_잘못된_JSON을_전달하면_400을_반환한다() {
         RestAssured.given().log().all()
                 .contentType(ContentType.JSON)
-                .body("{ \"name\": \"브라운\", \"date\": \"2026-12-31\", \"timeId\": 1, \"themeId\": 1") // 닫는 괄호 누락
+                .body("{ \"memberId\": 3, \"date\": \"2026-12-31\", \"timeId\": 1, \"themeId\": 1") // 닫는 괄호 누락
                 .when().post("/api/v1/reservations")
                 .then().log().all()
                 .statusCode(400)
@@ -221,11 +229,11 @@ public class ReservationControllerTest {
     @Test
     void 요청_파라미터가_빈값이면_400을_반환한다() {
         RestAssured.given().log().all()
-                .queryParam("name", "")
+                .queryParam("memberId", "")
                 .when().get("/api/v1/reservations")
                 .then().log().all()
                 .statusCode(400)
-                .body("errorCode", is("INVALID_INPUT_VALUE"));
+                .body("errorCode", is("MISSING_REQUEST_PARAMETER"));
     }
 
     @Test
@@ -234,7 +242,7 @@ public class ReservationControllerTest {
         createTime("11:00");
 
         Map<String, Object> updateParams = new HashMap<>();
-        updateParams.put("name", "브라운");
+        updateParams.put("memberId", 3);
         updateParams.put("date", "2026-12-31");
         updateParams.put("timeId", 2);
         updateParams.put("themeId", 1);
@@ -257,7 +265,7 @@ public class ReservationControllerTest {
 
     private Map<String, Object> reservationParams() {
         Map<String, Object> params = new HashMap<>();
-        params.put("name", "브라운");
+        params.put("memberId", 3);
         params.put("date", "2026-12-31");
         params.put("timeId", 1);
         params.put("themeId", 1);
@@ -295,5 +303,12 @@ public class ReservationControllerTest {
                 .contentType(ContentType.JSON)
                 .body(params)
                 .when().post("/api/v1/reservations");
+    }
+
+    private void createMember(Long id, String loginId, String name) {
+        jdbcTemplate.update(
+                "INSERT INTO member (id, login_id, password, name, role) VALUES (?, ?, ?, ?, ?)",
+                id, loginId, "password123", name, "USER"
+        );
     }
 }
