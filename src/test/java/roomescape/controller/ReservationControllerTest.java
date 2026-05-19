@@ -140,7 +140,7 @@ public class ReservationControllerTest {
 
         RestAssured.given().log().all()
                 .filter(login("bri"))
-                .when().get("/api/v1/reservations?memberId=1")
+                .when().get("/api/v1/reservations/mine")
                 .then().log().all()
                 .statusCode(200)
                 .body("size()", is(1))
@@ -153,7 +153,7 @@ public class ReservationControllerTest {
 
         RestAssured.given().log().all()
                 .filter(login("brown"))
-                .when().delete("/api/v1/reservations/1?memberId=3")
+                .when().delete("/api/v1/reservations/1")
                 .then().log().all()
                 .statusCode(204);
         RestAssured.given().log().all()
@@ -166,7 +166,8 @@ public class ReservationControllerTest {
     @Test
     void 예약_삭제_시_잘못된_타입의_ID를_전달하면_400을_반환한다() {
         RestAssured.given().log().all()
-                .when().delete("/api/v1/reservations/invalid-id?memberId=3")
+                .filter(login("brown"))
+                .when().delete("/api/v1/reservations/invalid-id")
                 .then().log().all()
                 .statusCode(400)
                 .body("status", is(400))
@@ -177,7 +178,7 @@ public class ReservationControllerTest {
     @Test
     void 예약_삭제_시_ID를_입력하지_않으면_404를_반환한다() {
         RestAssured.given().log().all()
-                .when().delete("/api/v1/reservations/?memberId=3")
+                .when().delete("/api/v1/reservations/")
                 .then().log().all()
                 .statusCode(404)
                 .body("status", is(404))
@@ -238,12 +239,10 @@ public class ReservationControllerTest {
     @Test
     void 요청_파라미터가_빈값이면_400을_반환한다() {
         RestAssured.given().log().all()
-                .filter(login("brown"))
-                .queryParam("memberId", "")
-                .when().get("/api/v1/reservations")
+                .when().get("/api/v1/reservations/mine")
                 .then().log().all()
-                .statusCode(400)
-                .body("errorCode", is("MISSING_REQUEST_PARAMETER"));
+                .statusCode(401)
+                .body("errorCode", is("AUTHENTICATION_FAILED"));
     }
 
     @Test
@@ -311,10 +310,20 @@ public class ReservationControllerTest {
 
     private void createReservation(Map<String, Object> params) {
         RestAssured.given().log().all()
-                .filter(login("brown"))
+                .filter(login(loginIdForMemberId(params.get("memberId"))))
                 .contentType(ContentType.JSON)
                 .body(params)
                 .when().post("/api/v1/reservations");
+    }
+
+    private String loginIdForMemberId(Object memberId) {
+        if (Integer.valueOf(1).equals(memberId)) {
+            return "bri";
+        }
+        if (Integer.valueOf(2).equals(memberId)) {
+            return "eden";
+        }
+        return "brown";
     }
 
     private void createMember(Long id, String loginId, String name) {

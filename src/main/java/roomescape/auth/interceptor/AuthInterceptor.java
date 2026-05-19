@@ -43,7 +43,11 @@ public class AuthInterceptor implements HandlerInterceptor {
         String uri = request.getRequestURI();
 
         if (uri.equals("/api/v1/reservations")) {
-            return method.equals("POST") || (method.equals("GET") && request.getParameter("memberId") != null);
+            return method.equals("POST");
+        }
+
+        if (uri.equals("/api/v1/reservations/mine")) {
+            return method.equals("GET");
         }
 
         return uri.matches("/api/v1/reservations/\\d+") && (method.equals("DELETE") || method.equals("PUT"));
@@ -52,7 +56,7 @@ public class AuthInterceptor implements HandlerInterceptor {
     private void sendAuthenticationError(HttpServletRequest request, HttpServletResponse response) throws IOException {
         ErrorResponse errorResponse = ErrorResponse.from(
                 HttpStatus.UNAUTHORIZED.value(),
-                "Authentication is required.",
+                "로그인이 필요합니다.",
                 "AUTHENTICATION_FAILED",
                 request.getRequestURI()
         );

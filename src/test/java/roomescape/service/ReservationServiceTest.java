@@ -49,7 +49,7 @@ public class ReservationServiceTest {
         Member member = Member.from(1L, "eden", "password123", "이든", "USER");
         ReservationTime time = ReservationTime.from(1L, LocalTime.of(10, 0));
         Theme theme = Theme.from(1L, "테마", "설명", "url");
-        ReservationCreateRequest request = new ReservationCreateRequest(1L, date, 1L, 1L);
+        ReservationCreateRequest request = new ReservationCreateRequest(date, 1L, 1L);
         Reservation savedReservation = Reservation.from(generatedId, 1L, date, 1L, 1L);
 
         when(reservationTimeDao.findById(1L)).thenReturn(time);
@@ -58,7 +58,7 @@ public class ReservationServiceTest {
         when(reservationDao.insertReservation(any(Reservation.class))).thenReturn(generatedId);
         when(reservationDao.findReservationById(generatedId)).thenReturn(savedReservation);
 
-        ReservationResponse actual = reservationService.createReservation(request);
+        ReservationResponse actual = reservationService.createReservation(member.getId(), request);
 
         assertThat(actual.id()).isEqualTo(generatedId);
         assertThat(actual.member().name()).isEqualTo("이든");
@@ -69,11 +69,11 @@ public class ReservationServiceTest {
     void 지나간_날짜와_시간에_대한_예약_생성은_불가능하다() {
         LocalDate date = LocalDate.of(2020, 1, 1);
         ReservationTime time = ReservationTime.from(1L, LocalTime.of(10, 0));
-        ReservationCreateRequest request = new ReservationCreateRequest(1L, date, 1L, 1L);
+        ReservationCreateRequest request = new ReservationCreateRequest(date, 1L, 1L);
 
         when(reservationTimeDao.findById(1L)).thenReturn(time);
 
-        assertThatThrownBy(() -> reservationService.createReservation(request))
+        assertThatThrownBy(() -> reservationService.createReservation(1L, request))
                 .isInstanceOf(PastReservationTimeException.class);
     }
 

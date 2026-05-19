@@ -1,6 +1,5 @@
 package roomescape.service;
 
-import jakarta.annotation.Nonnull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,8 +47,8 @@ public class ReservationService {
     }
 
     @Transactional
-    public ReservationResponse createReservation(ReservationCreateRequest request) {
-        Reservation reservation = Reservation.from(request.memberId(), request.date(), request.timeId(), request.themeId());
+    public ReservationResponse createReservation(Long memberId, ReservationCreateRequest request) {
+        Reservation reservation = Reservation.from(memberId, request.date(), request.timeId(), request.themeId());
         ReservationTime time = reservationTimeDao.findById(request.timeId());
         reservation.validateNotPast(LocalDateTime.of(request.date(), time.getStartAt()));
 
@@ -96,9 +95,9 @@ public class ReservationService {
     }
 
     @Transactional
-    public void updateUserReservation(Long id, ReservationUpdateRequest request) {
+    public void updateUserReservation(Long id, Long memberId, ReservationUpdateRequest request) {
         ReservationTime time = reservationTimeDao.findById(request.timeId());
-        Reservation reservation = Reservation.from(id, request.memberId(), request.date(), request.timeId(), request.themeId());
+        Reservation reservation = Reservation.from(id, memberId, request.date(), request.timeId(), request.themeId());
         reservation.validateNotPast(LocalDateTime.of(request.date(), time.getStartAt()));
         int updateCount = reservationDao.update(id, reservation);
         Reservation.validateDeletion(updateCount);

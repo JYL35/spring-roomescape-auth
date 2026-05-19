@@ -1,7 +1,6 @@
 package roomescape.controller;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -14,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import roomescape.auth.LoginMember;
+import roomescape.domain.Member;
 import roomescape.dto.request.ReservationCreateRequest;
 import roomescape.dto.request.ReservationUpdateRequest;
 import roomescape.dto.response.AvailableTimeResponse;
@@ -43,17 +44,18 @@ public class ReservationController {
 
     @PostMapping
     public ResponseEntity<ReservationResponse> createReservation(
+            @LoginMember Member member,
             @Valid @RequestBody ReservationCreateRequest request) {
-        ReservationResponse reservationResponse = reservationService.createReservation(request);
+        ReservationResponse reservationResponse = reservationService.createReservation(member.getId(), request);
         return ResponseEntity.created(URI.create("/api/v1/reservations/" + reservationResponse.id()))
                 .body(reservationResponse);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUserReservation(
-            @PathVariable @NotNull(message = "예약 ID는 필수로 입력해야 합니다.") Long id,
-            @RequestParam @NotNull(message = "회원 ID는 필수로 입력해야 합니다.") Long memberId) {
-        reservationService.deleteUserReservation(id, memberId);
+            @LoginMember Member member,
+            @PathVariable @NotNull(message = "예약 ID는 필수로 입력해야 합니다.") Long id) {
+        reservationService.deleteUserReservation(id, member.getId());
         return ResponseEntity.noContent().build();
     }
 
@@ -65,18 +67,18 @@ public class ReservationController {
         return ResponseEntity.ok().body(availableTimeResponses);
     }
 
-    @GetMapping(params = {"memberId"})
-    public ResponseEntity<List<ReservationResponse>> getUserReservations(
-            @RequestParam @NotNull(message = "회원 ID는 필수로 입력해야 합니다.") Long memberId) {
-        List<ReservationResponse> reservationResponses = reservationService.getUserReservations(memberId);
+    @GetMapping("/mine")
+    public ResponseEntity<List<ReservationResponse>> getUserReservations(@LoginMember Member member) {
+        List<ReservationResponse> reservationResponses = reservationService.getUserReservations(member.getId());
         return ResponseEntity.ok().body(reservationResponses);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Void> updateUserReservations(
+            @LoginMember Member member,
             @PathVariable @NotNull(message = "예약 ID는 필수로 입력해야 합니다.") Long id,
             @Valid @RequestBody ReservationUpdateRequest request) {
-        reservationService.updateUserReservation(id, request);
+        reservationService.updateUserReservation(id, member.getId(), request);
         return ResponseEntity.noContent().build();
     }
 }
