@@ -14,6 +14,7 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static roomescape.auth.TestAuthSupport.adminLogin;
 import static roomescape.auth.TestAuthSupport.login;
 
 @ActiveProfiles("test")
@@ -32,11 +33,13 @@ public class AdminReservationControllerTest {
         createReservation(reservationParams());
 
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .when().delete("/api/v1/admin/reservations/1")
                 .then().log().all()
                 .statusCode(204);
         RestAssured.given().log().all()
-                .when().get("/api/v1/reservations")
+                .filter(adminSession())
+                .when().get("/api/v1/admin/reservations")
                 .then().log().all()
                 .statusCode(200)
                 .body("size()", is(0));
@@ -45,6 +48,7 @@ public class AdminReservationControllerTest {
     @Test
     void 존재하지_않는_예약을_삭제하면_404를_반환한다() {
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .when().delete("/api/v1/admin/reservations/1")
                 .then().log().all()
                 .statusCode(404)
@@ -54,6 +58,7 @@ public class AdminReservationControllerTest {
     @Test
     void 예약_삭제_시_잘못된_타입의_ID를_전달하면_400을_반환한다() {
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .when().delete("/api/v1/admin/reservations/invalid-id")
                 .then().log().all()
                 .statusCode(400)
@@ -65,6 +70,7 @@ public class AdminReservationControllerTest {
     @Test
     void 예약_삭제_시_ID를_입력하지_않으면_404를_반환한다() {
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .when().delete("/api/v1/admin/reservations/")
                 .then().log().all()
                 .statusCode(404)
@@ -86,7 +92,9 @@ public class AdminReservationControllerTest {
         Map<String, String> time = new HashMap<>();
         time.put("startAt", startAt);
 
-        RestAssured.given().contentType(ContentType.JSON)
+        RestAssured.given()
+                .filter(adminSession())
+                .contentType(ContentType.JSON)
                 .body(time)
                 .when().post("/api/v1/admin/times");
     }
@@ -97,7 +105,9 @@ public class AdminReservationControllerTest {
         themeParams.put("description", description);
         themeParams.put("imgUrl", "링크~");
 
-        RestAssured.given().contentType(ContentType.JSON)
+        RestAssured.given()
+                .filter(adminSession())
+                .contentType(ContentType.JSON)
                 .body(themeParams)
                 .when().post("/api/v1/admin/themes");
     }
@@ -114,6 +124,18 @@ public class AdminReservationControllerTest {
         jdbcTemplate.update(
                 "INSERT INTO member (id, login_id, password, name, role) VALUES (?, ?, ?, ?, ?)",
                 id, loginId, "password123", name, "USER"
+        );
+    }
+
+    private io.restassured.filter.session.SessionFilter adminSession() {
+        createAdminMember();
+        return adminLogin();
+    }
+
+    private void createAdminMember() {
+        jdbcTemplate.update(
+                "MERGE INTO member KEY(id) VALUES (?, ?, ?, ?, ?)",
+                -1L, "admin", "admin123", "관리자", "ADMIN"
         );
     }
 }

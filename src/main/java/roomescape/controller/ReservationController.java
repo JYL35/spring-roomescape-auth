@@ -36,12 +36,6 @@ public class ReservationController {
         this.reservationService = reservationService;
     }
 
-    @GetMapping
-    public ResponseEntity<List<ReservationResponse>> getReservations() {
-        List<ReservationResponse> reservationResponses = reservationService.getReservations();
-        return ResponseEntity.ok().body(reservationResponses);
-    }
-
     @PostMapping
     public ResponseEntity<ReservationResponse> createReservation(
             @LoginMember Member member,

@@ -14,6 +14,7 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static roomescape.auth.TestAuthSupport.adminLogin;
 import static roomescape.auth.TestAuthSupport.login;
 
 @ActiveProfiles("test")
@@ -27,6 +28,7 @@ public class AdminThemeControllerTest {
     @Test
     void 테마_추가() {
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .contentType(ContentType.JSON)
                 .body(themeParams())
                 .when().post("/api/v1/admin/themes")
@@ -41,6 +43,7 @@ public class AdminThemeControllerTest {
         createTheme(themeParams());
 
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .contentType(ContentType.JSON)
                 .body(Map.of("userName", "ADMIN"))
                 .when().delete("/api/v1/admin/themes/1")
@@ -51,6 +54,7 @@ public class AdminThemeControllerTest {
     @Test
     void 존재하지_않는_테마를_삭제하면_404를_반환한다() {
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .contentType(ContentType.JSON)
                 .body(themeParams())
                 .when().delete("/api/v1/admin/themes/1")
@@ -67,6 +71,7 @@ public class AdminThemeControllerTest {
         createReservation(reservationParams());
 
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .contentType(ContentType.JSON)
                 .body(Map.of("userName", "ADMIN"))
                 .when().delete("/api/v1/admin/themes/1")
@@ -82,6 +87,7 @@ public class AdminThemeControllerTest {
         invalidParams.put("imgUrl", "이미지~");
 
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .contentType(ContentType.JSON)
                 .body(invalidParams)
                 .when().post("/api/v1/admin/themes")
@@ -94,6 +100,7 @@ public class AdminThemeControllerTest {
     @Test
     void 테마_삭제_시_잘못된_타입의_ID를_전달하면_400을_반환한다() {
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .contentType(ContentType.JSON)
                 .body(Map.of("userName", "ADMIN"))
                 .when().delete("/api/v1/admin/themes/invalid-id")
@@ -107,6 +114,7 @@ public class AdminThemeControllerTest {
     @Test
     void 테마_삭제_시_ID를_입력하지_않으면_404를_반환한다() {
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .when().delete("/api/v1/admin/themes/")
                 .then().log().all()
                 .statusCode(404)
@@ -136,13 +144,17 @@ public class AdminThemeControllerTest {
         Map<String, String> time = new HashMap<>();
         time.put("startAt", startAt);
 
-        RestAssured.given().contentType(ContentType.JSON)
+        RestAssured.given()
+                .filter(adminSession())
+                .contentType(ContentType.JSON)
                 .body(time)
                 .when().post("/api/v1/admin/times");
     }
 
     private void createTheme(Map<String, Object> params) {
-        RestAssured.given().contentType(ContentType.JSON)
+        RestAssured.given()
+                .filter(adminSession())
+                .contentType(ContentType.JSON)
                 .body(params)
                 .when().post("/api/v1/admin/themes");
     }
@@ -159,6 +171,18 @@ public class AdminThemeControllerTest {
         jdbcTemplate.update(
                 "INSERT INTO member (id, login_id, password, name, role) VALUES (?, ?, ?, ?, ?)",
                 id, loginId, "password123", name, "USER"
+        );
+    }
+
+    private io.restassured.filter.session.SessionFilter adminSession() {
+        createAdminMember();
+        return adminLogin();
+    }
+
+    private void createAdminMember() {
+        jdbcTemplate.update(
+                "MERGE INTO member KEY(id) VALUES (?, ?, ?, ?, ?)",
+                -1L, "admin", "admin123", "관리자", "ADMIN"
         );
     }
 }

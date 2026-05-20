@@ -15,6 +15,7 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static roomescape.auth.TestAuthSupport.adminLogin;
 import static roomescape.auth.TestAuthSupport.login;
 
 @ActiveProfiles("test")
@@ -42,6 +43,7 @@ public class AdminReservationTimeControllerTest {
         time.put("startAt", "13:00");
 
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .contentType(ContentType.JSON)
                 .body(time)
                 .when().post("/api/v1/admin/times")
@@ -63,6 +65,7 @@ public class AdminReservationTimeControllerTest {
                 .body("[2].startAt", is("12:00"));
 
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .when().delete("/api/v1/admin/times/1")
                 .then().log().all()
                 .statusCode(204);
@@ -114,6 +117,7 @@ public class AdminReservationTimeControllerTest {
     @Test
     void 존재하지_않는_예약시간을_삭제하면_404를_반환한다() {
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .when().delete("/api/v1/admin/times/4")
                 .then().log().all()
                 .statusCode(404)
@@ -125,6 +129,7 @@ public class AdminReservationTimeControllerTest {
         createReservation(reservationParams());
 
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .when().delete("/api/v1/admin/times/1")
                 .then().log().all()
                 .statusCode(409)
@@ -135,6 +140,7 @@ public class AdminReservationTimeControllerTest {
     @Test
     void 시간_추가_시_필수_파라미터가_누락되면_400을_반환한다() {
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .contentType(ContentType.JSON)
                 .body(Map.of())
                 .when().post("/api/v1/admin/times")
@@ -147,6 +153,7 @@ public class AdminReservationTimeControllerTest {
     @Test
     void 시간_삭제_시_잘못된_타입의_ID를_전달하면_400을_반환한다() {
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .when().delete("/api/v1/admin/times/invalid-id")
                 .then().log().all()
                 .statusCode(400)
@@ -158,6 +165,7 @@ public class AdminReservationTimeControllerTest {
     @Test
     void 시간_삭제_시_ID를_입력하지_않으면_404를_반환한다() {
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .when().delete("/api/v1/admin/times/")
                 .then().log().all()
                 .statusCode(404)
@@ -185,7 +193,9 @@ public class AdminReservationTimeControllerTest {
         Map<String, String> time = new HashMap<>();
         time.put("startAt", startAt);
 
-        RestAssured.given().contentType(ContentType.JSON)
+        RestAssured.given()
+                .filter(adminSession())
+                .contentType(ContentType.JSON)
                 .body(time)
                 .when().post("/api/v1/admin/times");
     }
@@ -197,7 +207,9 @@ public class AdminReservationTimeControllerTest {
         themeParams.put("imgUrl", "링크~");
         themeParams.put("userName", "ADMIN");
 
-        RestAssured.given().contentType(ContentType.JSON)
+        RestAssured.given()
+                .filter(adminSession())
+                .contentType(ContentType.JSON)
                 .body(themeParams)
                 .when().post("/api/v1/admin/themes");
     }
@@ -214,6 +226,18 @@ public class AdminReservationTimeControllerTest {
         jdbcTemplate.update(
                 "INSERT INTO member (id, login_id, password, name, role) VALUES (?, ?, ?, ?, ?)",
                 id, loginId, "password123", name, "USER"
+        );
+    }
+
+    private io.restassured.filter.session.SessionFilter adminSession() {
+        createAdminMember();
+        return adminLogin();
+    }
+
+    private void createAdminMember() {
+        jdbcTemplate.update(
+                "MERGE INTO member KEY(id) VALUES (?, ?, ?, ?, ?)",
+                -1L, "admin", "admin123", "관리자", "ADMIN"
         );
     }
 }

@@ -3,7 +3,9 @@ package roomescape.controller;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
@@ -13,11 +15,15 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static roomescape.auth.TestAuthSupport.adminLogin;
 
 @ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class ThemeControllerTest {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void 테마_조회() {
@@ -27,11 +33,13 @@ public class ThemeControllerTest {
         params.put("imgUrl", "링크~");
 
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .contentType(ContentType.JSON)
                 .body(params)
                 .when().post("/api/v1/admin/themes");
 
         RestAssured.given().log().all()
+                .filter(adminSession())
                 .contentType(ContentType.JSON)
                 .body(params)
                 .when().post("/api/v1/admin/themes");
@@ -74,5 +82,13 @@ public class ThemeControllerTest {
                 .body("status", is(400))
                 .body("errorCode", is("INVALID_PARAMETER_CONDITION"))
                 .body("message", containsString("요청 파라미터 조건이 맞지 않습니다"));
+    }
+
+    private io.restassured.filter.session.SessionFilter adminSession() {
+        jdbcTemplate.update(
+                "MERGE INTO member KEY(id) VALUES (?, ?, ?, ?, ?)",
+                -1L, "admin", "admin123", "관리자", "ADMIN"
+        );
+        return adminLogin();
     }
 }

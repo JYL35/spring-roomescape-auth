@@ -14,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.is;
+import static roomescape.auth.TestAuthSupport.adminLogin;
 import static roomescape.auth.TestAuthSupport.login;
 
 @ActiveProfiles("test")
@@ -29,6 +30,10 @@ public class AuthInterceptorTest {
         jdbcTemplate.update(
                 "INSERT INTO member (id, login_id, password, name, role) VALUES (?, ?, ?, ?, ?)",
                 1L, "eden", "password123", "Eden", "USER"
+        );
+        jdbcTemplate.update(
+                "INSERT INTO member (id, login_id, password, name, role) VALUES (?, ?, ?, ?, ?)",
+                2L, "admin", "admin123", "Admin", "ADMIN"
         );
         jdbcTemplate.update("INSERT INTO reservation_time (id, start_at) VALUES (?, ?)", 1L, "10:00");
         jdbcTemplate.update(
@@ -61,6 +66,45 @@ public class AuthInterceptorTest {
                 .then().log().all()
                 .statusCode(201)
                 .body("id", is(1));
+    }
+
+    @Test
+    void rejectAdminApiWithoutLogin() {
+        RestAssured.given().log().all()
+                .contentType(ContentType.JSON)
+                .body(Map.of("startAt", "11:00"))
+                .when().post("/api/v1/admin/times")
+                .then().log().all()
+                .statusCode(401)
+                .body("status", is(401))
+                .body("errorCode", is("AUTHENTICATION_FAILED"));
+    }
+
+    @Test
+    void rejectAdminApiForNonAdminMember() {
+        SessionFilter sessionFilter = login("eden");
+
+        RestAssured.given().log().all()
+                .filter(sessionFilter)
+                .contentType(ContentType.JSON)
+                .body(Map.of("startAt", "11:00"))
+                .when().post("/api/v1/admin/times")
+                .then().log().all()
+                .statusCode(403)
+                .body("status", is(403))
+                .body("errorCode", is("ADMIN_AUTHORIZATION_FAILED"));
+    }
+
+    @Test
+    void allowAdminApiForAdminMember() {
+        SessionFilter sessionFilter = adminLogin();
+
+        RestAssured.given().log().all()
+                .filter(sessionFilter)
+                .when().delete("/api/v1/admin/reservations/999")
+                .then().log().all()
+                .statusCode(404)
+                .body("errorCode", is("RESERVATION_NOT_FOUND"));
     }
 
     private Map<String, Object> reservationParams() {
