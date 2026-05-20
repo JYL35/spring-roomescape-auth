@@ -1,6 +1,7 @@
 package roomescape.auth.controller;
 
 import io.restassured.RestAssured;
+import io.restassured.filter.session.SessionFilter;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,43 @@ public class AuthControllerTest {
                 .contentType(ContentType.JSON)
                 .body(Map.of("loginId", "eden", "password", "wrong-password"))
                 .when().post("/api/v1/login")
+                .then().log().all()
+                .statusCode(401)
+                .body("status", is(401))
+                .body("errorCode", is("AUTHENTICATION_FAILED"));
+    }
+
+    @Test
+    void 로그아웃() {
+        SessionFilter sessionFilter = new SessionFilter();
+
+        RestAssured.given().log().all()
+                .filter(sessionFilter)
+                .contentType(ContentType.JSON)
+                .body(Map.of("loginId", "eden", "password", "password123"))
+                .when().post("/api/v1/login")
+                .then().log().all()
+                .statusCode(200);
+
+        RestAssured.given().log().all()
+                .filter(sessionFilter)
+                .when().post("/api/v1/logout")
+                .then().log().all()
+                .statusCode(204);
+
+        RestAssured.given().log().all()
+                .filter(sessionFilter)
+                .when().get("/api/v1/reservations/mine")
+                .then().log().all()
+                .statusCode(401)
+                .body("status", is(401))
+                .body("errorCode", is("AUTHENTICATION_FAILED"));
+    }
+
+    @Test
+    void 로그인하지_않고_로그아웃하면_401을_반환한다() {
+        RestAssured.given().log().all()
+                .when().post("/api/v1/logout")
                 .then().log().all()
                 .statusCode(401)
                 .body("status", is(401))

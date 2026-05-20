@@ -80,6 +80,10 @@ public class AuthInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        if (uri.equals("/api/v1/logout")) {
+            return method.equals("POST");
+        }
+
         if (uri.equals("/api/v1/reservations")) {
             return method.equals("POST");
         }
