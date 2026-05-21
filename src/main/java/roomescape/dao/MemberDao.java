@@ -23,7 +23,8 @@ public class MemberDao {
             resultSet.getString("login_id"),
             resultSet.getString("password"),
             resultSet.getString("name"),
-            resultSet.getString("role")
+            resultSet.getString("role"),
+            resultSet.getLong("store_id")
     );
 
     @Autowired

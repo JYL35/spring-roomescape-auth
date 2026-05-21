@@ -8,14 +8,16 @@ public record ThemeResponse(
         Long id,
         String name,
         String description,
-        String imgUrl
+        String imgUrl,
+        Long storeId
 ) {
     public static ThemeResponse from(Theme theme) {
         return new ThemeResponse(
                 theme.getId(),
                 theme.getName(),
                 theme.getDescription(),
-                theme.getImgUrl()
+                theme.getImgUrl(),
+                theme.getStoreId()
         );
     }
 

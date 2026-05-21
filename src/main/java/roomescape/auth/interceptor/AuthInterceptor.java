@@ -40,7 +40,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        if (!requiresAdmin(request)) {
+        if (!requiresAdminApi(request)) {
             return true;
         }
 
@@ -52,7 +52,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        if ("ADMIN".equals(member.getRole())) {
+        if (canAccessAdminApi(member, request)) {
             return true;
         }
 
@@ -76,7 +76,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         String method = request.getMethod();
         String uri = request.getRequestURI();
 
-        if (requiresAdmin(request)) {
+        if (requiresAdminApi(request)) {
             return true;
         }
 
@@ -95,8 +95,15 @@ public class AuthInterceptor implements HandlerInterceptor {
         return uri.matches("/api/v1/reservations/\\d+") && (method.equals("DELETE") || method.equals("PUT"));
     }
 
-    private boolean requiresAdmin(HttpServletRequest request) {
+    private boolean requiresAdminApi(HttpServletRequest request) {
         return request.getRequestURI().startsWith("/api/v1/admin/");
+    }
+
+    private boolean canAccessAdminApi(Member member, HttpServletRequest request) {
+        if (member.isAdmin()) {
+            return true;
+        }
+        return member.isManager() && request.getRequestURI().startsWith("/api/v1/admin/reservations");
     }
 
     private void sendError(

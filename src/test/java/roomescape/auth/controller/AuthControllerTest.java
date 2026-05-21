@@ -26,9 +26,10 @@ public class AuthControllerTest {
 
     @BeforeEach
     void setUp() {
+        jdbcTemplate.update("INSERT INTO store (id, name) VALUES (?, ?)", 1L, "강남점");
         jdbcTemplate.update(
-                "INSERT INTO member (id, login_id, password, name, role) VALUES (?, ?, ?, ?, ?)",
-                1L, "eden", "password123", "Eden", "USER"
+                "INSERT INTO member (id, login_id, password, name, role, store_id) VALUES (?, ?, ?, ?, ?, ?)",
+                1L, "eden", "password123", "Eden", "USER", 1L
         );
     }
 

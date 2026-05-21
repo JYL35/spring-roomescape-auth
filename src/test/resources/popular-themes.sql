@@ -1,3 +1,8 @@
+INSERT INTO store (id, name)
+VALUES (1, '강남점'),
+       (2, '잠실점'),
+       (3, '홍대점');
+
 INSERT INTO reservation_time (start_at)
 VALUES ('10:00'),
        ('11:00'),
@@ -11,21 +16,21 @@ VALUES ('10:00'),
        ('20:00'),
        ('21:00');
 
-INSERT INTO theme (name, description, img_url)
-VALUES ('이든의 공포 하우스', '이든이 귀신으로 나오는 공포 테마', 'https://images.example.com/themes/horror-house.jpg'),
-       ('정콩이의 방탈출', '정콩이가 지키는 미스터리 방탈출', 'https://images.example.com/themes/jungkong-room.jpg'),
-       ('우주 정거장 탈출', '고장 난 우주 정거장에서 귀환하는 SF 테마', 'https://images.example.com/themes/space-station.jpg'),
-       ('고대 유적의 비밀', '사라진 유적의 문을 여는 어드벤처 테마', 'https://images.example.com/themes/ancient-ruins.jpg'),
-       ('마법사의 서재', '봉인된 주문서를 찾아 탈출하는 판타지 테마', 'https://images.example.com/themes/wizard-library.jpg'),
-       ('좀비 연구소', '감염이 퍼진 연구소에서 탈출하는 스릴러 테마', 'https://images.example.com/themes/zombie-lab.jpg'),
-       ('해적선의 보물', '저주받은 해적선에서 보물을 찾아 탈출하는 테마', 'https://images.example.com/themes/pirate-ship.jpg'),
-       ('미스터리 호텔', '사라진 투숙객의 단서를 찾는 미스터리 테마', 'https://images.example.com/themes/mystery-hotel.jpg'),
-       ('시간의 문', '뒤틀린 시간 속에서 원래 세계로 돌아가는 테마', 'https://images.example.com/themes/time-gate.jpg'),
-       ('사라진 탐정', '실종된 탐정의 마지막 사건을 추적하는 테마', 'https://images.example.com/themes/missing-detective.jpg'),
-       ('집계 제외 후보', '상위 10개 경계 밖으로 밀릴 테마', 'https://images.example.com/themes/excluded-candidate.jpg');
+INSERT INTO theme (name, description, img_url, store_id)
+VALUES ('이든의 공포 하우스', '이든이 귀신으로 나오는 공포 테마', 'https://images.example.com/themes/horror-house.jpg', 1),
+       ('정콩이의 방탈출', '정콩이가 지키는 미스터리 방탈출', 'https://images.example.com/themes/jungkong-room.jpg', 2),
+       ('우주 정거장 탈출', '고장 난 우주 정거장에서 귀환하는 SF 테마', 'https://images.example.com/themes/space-station.jpg', 3),
+       ('고대 유적의 비밀', '사라진 유적의 문을 여는 어드벤처 테마', 'https://images.example.com/themes/ancient-ruins.jpg', 1),
+       ('마법사의 서재', '봉인된 주문서를 찾아 탈출하는 판타지 테마', 'https://images.example.com/themes/wizard-library.jpg', 1),
+       ('좀비 연구소', '감염이 퍼진 연구소에서 탈출하는 스릴러 테마', 'https://images.example.com/themes/zombie-lab.jpg', 2),
+       ('해적선의 보물', '저주받은 해적선에서 보물을 찾아 탈출하는 테마', 'https://images.example.com/themes/pirate-ship.jpg', 2),
+       ('미스터리 호텔', '사라진 투숙객의 단서를 찾는 미스터리 테마', 'https://images.example.com/themes/mystery-hotel.jpg', 3),
+       ('시간의 문', '뒤틀린 시간 속에서 원래 세계로 돌아가는 테마', 'https://images.example.com/themes/time-gate.jpg', 3),
+       ('사라진 탐정', '실종된 탐정의 마지막 사건을 추적하는 테마', 'https://images.example.com/themes/missing-detective.jpg', 1),
+       ('집계 제외 후보', '상위 10개 경계 밖으로 밀릴 테마', 'https://images.example.com/themes/excluded-candidate.jpg', 2);
 
-INSERT INTO member (login_id, password, name, role)
-SELECT 'member' || X, 'password123', '예약자' || X, 'USER'
+INSERT INTO member (login_id, password, name, role, store_id)
+SELECT 'member' || X, 'password123', '예약자' || X, 'USER', MOD(X - 1, 3) + 1
 FROM SYSTEM_RANGE(1, 66);
 
 INSERT INTO reservation (member_id, date, time_id, theme_id)

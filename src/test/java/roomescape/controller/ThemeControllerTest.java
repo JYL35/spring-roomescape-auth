@@ -31,6 +31,7 @@ public class ThemeControllerTest {
         params.put("name", "이든의 공포 하우스");
         params.put("description", "이든이 귀신으로 나옴");
         params.put("imgUrl", "링크~");
+        params.put("storeId", 1L);
 
         RestAssured.given().log().all()
                 .filter(adminSession())
@@ -85,9 +86,10 @@ public class ThemeControllerTest {
     }
 
     private io.restassured.filter.session.SessionFilter adminSession() {
+        jdbcTemplate.update("MERGE INTO store KEY(id) VALUES (?, ?)", 1L, "강남점");
         jdbcTemplate.update(
-                "MERGE INTO member KEY(id) VALUES (?, ?, ?, ?, ?)",
-                -1L, "admin", "admin123", "관리자", "ADMIN"
+                "MERGE INTO member KEY(id) VALUES (?, ?, ?, ?, ?, ?)",
+                -1L, "admin", "admin123", "관리자", "ADMIN", 1L
         );
         return adminLogin();
     }

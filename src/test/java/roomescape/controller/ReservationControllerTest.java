@@ -309,6 +309,7 @@ public class ReservationControllerTest {
         themeParams.put("name", name);
         themeParams.put("description", description);
         themeParams.put("imgUrl", "링크~");
+        themeParams.put("storeId", 1L);
 
         RestAssured.given()
                 .filter(adminSession())
@@ -336,9 +337,10 @@ public class ReservationControllerTest {
     }
 
     private void createMember(Long id, String loginId, String name) {
+        createStore(1L, "강남점");
         jdbcTemplate.update(
-                "INSERT INTO member (id, login_id, password, name, role) VALUES (?, ?, ?, ?, ?)",
-                id, loginId, "password123", name, "USER"
+                "INSERT INTO member (id, login_id, password, name, role, store_id) VALUES (?, ?, ?, ?, ?, ?)",
+                id, loginId, "password123", name, "USER", 1L
         );
     }
 
@@ -348,9 +350,14 @@ public class ReservationControllerTest {
     }
 
     private void createAdminMember() {
+        createStore(1L, "강남점");
         jdbcTemplate.update(
-                "MERGE INTO member KEY(id) VALUES (?, ?, ?, ?, ?)",
-                -1L, "admin", "admin123", "관리자", "ADMIN"
+                "MERGE INTO member KEY(id) VALUES (?, ?, ?, ?, ?, ?)",
+                -1L, "admin", "admin123", "관리자", "ADMIN", 1L
         );
+    }
+
+    private void createStore(Long id, String name) {
+        jdbcTemplate.update("MERGE INTO store KEY(id) VALUES (?, ?)", id, name);
     }
 }

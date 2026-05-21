@@ -2,6 +2,7 @@ package roomescape.dao;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import roomescape.domain.Reservation;
 import roomescape.exception.NotFoundException;
 import roomescape.exception.ReservationAlreadyExistsException;
+import roomescape.exception.ReservationNotFoundException;
 
 import java.sql.PreparedStatement;
 import java.time.LocalDate;
@@ -38,8 +40,12 @@ public class ReservationDao {
     }
 
     public Reservation findReservationById(Long id) {
-        String sql = "SELECT * FROM reservation WHERE id = ?";
-        return jdbcTemplate.queryForObject(sql, reservationRowMapper, id);
+        try {
+            String sql = "SELECT * FROM reservation WHERE id = ?";
+            return jdbcTemplate.queryForObject(sql, reservationRowMapper, id);
+        } catch (EmptyResultDataAccessException e) {
+            throw new ReservationNotFoundException("해당 예약을 찾을 수 없습니다.");
+        }
     }
 
     public Long insertReservation(Reservation reservation) {

@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
@@ -44,12 +45,17 @@ public class ThemeDaoTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @BeforeEach
+    void setUp() {
+        jdbcTemplate.update("MERGE INTO store KEY(id) VALUES (?, ?)", 1L, "강남점");
+    }
+
     @Test
     void 테마_생성_테스트() {
         String name = "이든의 공포 하우스";
         String description = "이든이 귀신으로 나오는 공포 테마";
         String imgUrl = "image.jpg";
-        Long id = themeDao.insertTheme(Theme.from(name, description, imgUrl));
+        Long id = themeDao.insertTheme(Theme.from(name, description, imgUrl, 1L));
 
         Theme actual = themeDao.findById(id);
 
@@ -57,11 +63,12 @@ public class ThemeDaoTest {
         assertThat(actual.getName()).isEqualTo(name);
         assertThat(actual.getDescription()).isEqualTo(description);
         assertThat(actual.getImgUrl()).isEqualTo(imgUrl);
+        assertThat(actual.getStoreId()).isEqualTo(1L);
     }
 
     @Test
     void 테마_삭제_테스트() {
-        Long id = themeDao.insertTheme(Theme.from("이든의 공포 하우스", "이든이 귀신으로 나오는 공포 테마", "image.jpg"));
+        Long id = themeDao.insertTheme(Theme.from("이든의 공포 하우스", "이든이 귀신으로 나오는 공포 테마", "image.jpg", 1L));
 
         int deleteCount = themeDao.delete(id);
 
@@ -77,7 +84,7 @@ public class ThemeDaoTest {
 
     @Test
     void 예약이_존재하는_테마_삭제_시_예외_발생() {
-        Long themeId = themeDao.insertTheme(Theme.from("이든의 공포 하우스", "이든이 귀신으로 나오는 공포 테마", "image.jpg"));
+        Long themeId = themeDao.insertTheme(Theme.from("이든의 공포 하우스", "이든이 귀신으로 나오는 공포 테마", "image.jpg", 1L));
         Long timeId = reservationTimeDao.insertReservationTime(ReservationTime.from(LocalTime.of(10, 0)));
         Long memberId = insertMember("eden", "이든");
         reservationDao.insertReservation(Reservation.from(memberId, LocalDate.of(2026, 5, 6), timeId, themeId));
@@ -115,8 +122,8 @@ public class ThemeDaoTest {
 
     private Long insertMember(String loginId, String name) {
         jdbcTemplate.update(
-                "INSERT INTO member (login_id, password, name, role) VALUES (?, ?, ?, ?)",
-                loginId, "password123", name, "USER"
+                "INSERT INTO member (login_id, password, name, role, store_id) VALUES (?, ?, ?, ?, ?)",
+                loginId, "password123", name, "USER", 1L
         );
         return jdbcTemplate.queryForObject("SELECT id FROM member WHERE login_id = ?", Long.class, loginId);
     }

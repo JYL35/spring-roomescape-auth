@@ -7,20 +7,22 @@ public class Theme {
     private final String name;
     private final String description;
     private final String imgUrl;
+    private final Long storeId;
 
-    private Theme(Long id, String name, String description, String imgUrl) {
+    private Theme(Long id, String name, String description, String imgUrl, Long storeId) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.imgUrl = imgUrl;
+        this.storeId = storeId;
     }
 
-    public static Theme from(Long id, String name, String description, String imgUrl) {
-        return new Theme(id, name, description, imgUrl);
+    public static Theme from(Long id, String name, String description, String imgUrl, Long storeId) {
+        return new Theme(id, name, description, imgUrl, storeId);
     }
 
-    public static Theme from(String name, String description, String imgUrl) {
-        return new Theme(null, name, description, imgUrl);
+    public static Theme from(String name, String description, String imgUrl, Long storeId) {
+        return new Theme(null, name, description, imgUrl, storeId);
     }
 
     public static void validateDeletion(int deleteCount) {
@@ -43,5 +45,9 @@ public class Theme {
 
     public String getImgUrl() {
         return imgUrl;
+    }
+
+    public Long getStoreId() {
+        return storeId;
     }
 }

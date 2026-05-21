@@ -1,5 +1,6 @@
 package roomescape.dao;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
@@ -42,9 +43,14 @@ public class ReservationDaoTest {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    @BeforeEach
+    void setUp() {
+        jdbcTemplate.update("MERGE INTO store KEY(id) VALUES (?, ?)", 1L, "강남점");
+    }
+
     @Test
     void 중복된_예약을_추가하면_예외가_발생한다() {
-        Long themeId = themeDao.insertTheme(Theme.from("테마", "설명", "url"));
+        Long themeId = themeDao.insertTheme(Theme.from("테마", "설명", "url", 1L));
         Long timeId = reservationTimeDao.insertReservationTime(ReservationTime.from(LocalTime.of(15, 30)));
         LocalDate date = LocalDate.of(2026, 5, 6);
         Long memberId = insertMember("eden", "이든");
@@ -58,7 +64,7 @@ public class ReservationDaoTest {
 
     @Test
     void 예약_조회_매핑_테스트() {
-        Long themeId = themeDao.insertTheme(Theme.from("테마", "설명", "url"));
+        Long themeId = themeDao.insertTheme(Theme.from("테마", "설명", "url", 1L));
         Long timeId = reservationTimeDao.insertReservationTime(ReservationTime.from(LocalTime.of(15, 30)));
         Long memberId = insertMember("eden", "이든");
         Reservation reservationToSave = Reservation.from(memberId, LocalDate.of(2026, 5, 5), timeId, themeId);
@@ -74,8 +80,8 @@ public class ReservationDaoTest {
 
     private Long insertMember(String loginId, String name) {
         jdbcTemplate.update(
-                "INSERT INTO member (login_id, password, name, role) VALUES (?, ?, ?, ?)",
-                loginId, "password123", name, "USER"
+                "INSERT INTO member (login_id, password, name, role, store_id) VALUES (?, ?, ?, ?, ?)",
+                loginId, "password123", name, "USER", 1L
         );
         return jdbcTemplate.queryForObject("SELECT id FROM member WHERE login_id = ?", Long.class, loginId);
     }

@@ -27,18 +27,19 @@ public class AuthInterceptorTest {
 
     @BeforeEach
     void setUp() {
+        jdbcTemplate.update("INSERT INTO store (id, name) VALUES (?, ?)", 1L, "강남점");
         jdbcTemplate.update(
-                "INSERT INTO member (id, login_id, password, name, role) VALUES (?, ?, ?, ?, ?)",
-                1L, "eden", "password123", "Eden", "USER"
+                "INSERT INTO member (id, login_id, password, name, role, store_id) VALUES (?, ?, ?, ?, ?, ?)",
+                1L, "eden", "password123", "Eden", "USER", 1L
         );
         jdbcTemplate.update(
-                "INSERT INTO member (id, login_id, password, name, role) VALUES (?, ?, ?, ?, ?)",
-                2L, "admin", "admin123", "Admin", "ADMIN"
+                "INSERT INTO member (id, login_id, password, name, role, store_id) VALUES (?, ?, ?, ?, ?, ?)",
+                2L, "admin", "admin123", "Admin", "ADMIN", 1L
         );
         jdbcTemplate.update("INSERT INTO reservation_time (id, start_at) VALUES (?, ?)", 1L, "10:00");
         jdbcTemplate.update(
-                "INSERT INTO theme (id, name, description, img_url) VALUES (?, ?, ?, ?)",
-                1L, "Theme", "Description", "image.png"
+                "INSERT INTO theme (id, name, description, img_url, store_id) VALUES (?, ?, ?, ?, ?)",
+                1L, "Theme", "Description", "image.png", 1L
         );
     }
 

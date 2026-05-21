@@ -818,7 +818,7 @@
     </div>
 
     <div id="admin-page" class="hidden">
-        <div class="admin-section">
+        <div class="admin-section" id="adminThemeSection">
             <h2>테마 관리</h2>
             <form id="themeForm" class="form">
                 <div class="field">
@@ -832,6 +832,10 @@
                 <div class="field">
                     <label for="themeImgUrl">이미지 URL</label>
                     <input type="text" id="themeImgUrl" required>
+                </div>
+                <div class="field">
+                    <label for="themeStoreId">매장 ID</label>
+                    <input type="number" id="themeStoreId" min="1" value="1" required>
                 </div>
                 <button type="submit" class="button primary">테마 추가</button>
             </form>
@@ -848,7 +852,7 @@
             </table>
         </div>
 
-        <div class="admin-section">
+        <div class="admin-section" id="adminTimeSection">
             <h2>시간 관리</h2>
             <form id="timeForm" class="form">
                 <div class="field">
@@ -924,6 +928,8 @@
     const reservationNav = document.getElementById('reservation-nav');
     const myReservationNav = document.getElementById('my-reservation-nav');
     const adminNav = document.getElementById('admin-nav');
+    const adminThemeSection = document.getElementById('adminThemeSection');
+    const adminTimeSection = document.getElementById('adminTimeSection');
     const logoutButton = document.getElementById('logoutButton');
 
     const API_THEMES = '/api/v1/themes';
@@ -955,8 +961,8 @@
     });
 
     function showPage(pageName) {
-        if (pageName === 'admin' && !isAdmin()) {
-            setStatus('관리자 권한이 필요합니다.', 'error');
+        if (pageName === 'admin' && !canManageReservations()) {
+            setStatus('예약 관리 권한이 필요합니다.', 'error');
             pageName = 'reservation';
         }
 
@@ -1037,14 +1043,24 @@
         return authState.member && authState.member.role === 'ADMIN';
     }
 
+    function isManager() {
+        return authState.member && authState.member.role === 'MANAGER';
+    }
+
+    function canManageReservations() {
+        return isAdmin() || isManager();
+    }
+
     function syncAuthState() {
         logoutButton.classList.toggle('hidden', !authState.member);
         syncAdminAccess();
     }
 
     function syncAdminAccess() {
-        adminNav.classList.toggle('hidden', !isAdmin());
-        if (!isAdmin() && !adminPage.classList.contains('hidden')) {
+        adminNav.classList.toggle('hidden', !canManageReservations());
+        adminThemeSection.classList.toggle('hidden', !isAdmin());
+        adminTimeSection.classList.toggle('hidden', !isAdmin());
+        if (!canManageReservations() && !adminPage.classList.contains('hidden')) {
             showPage('reservation');
         }
     }
@@ -1503,12 +1519,14 @@
     }
 
     function loadAdminData() {
-        if (!isAdmin()) {
-            setStatus('관리자 권한이 필요합니다.', 'error');
+        if (!canManageReservations()) {
+            setStatus('예약 관리 권한이 필요합니다.', 'error');
             return;
         }
-        loadAdminThemes();
-        loadAdminTimes();
+        if (isAdmin()) {
+            loadAdminThemes();
+            loadAdminTimes();
+        }
         loadAdminReservations();
     }
 
@@ -1542,11 +1560,12 @@
         const name = document.getElementById('themeName').value;
         const description = document.getElementById('themeDesc').value;
         const imgUrl = document.getElementById('themeImgUrl').value;
+        const storeId = Number(document.getElementById('themeStoreId').value);
         try {
             const response = await fetch(API_ADMIN_THEMES, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name, description, imgUrl})
+                body: JSON.stringify({name, description, imgUrl, storeId})
             });
             await checkResponse(response, "추가 실패");
             e.target.reset(); loadAdminThemes(); loadThemes();

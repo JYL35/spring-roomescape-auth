@@ -46,9 +46,9 @@ public class ReservationServiceTest {
     void 예약_생성_테스트() {
         long generatedId = 1L;
         LocalDate date = LocalDate.now().plusDays(1);
-        Member member = Member.from(1L, "eden", "password123", "이든", "USER");
+        Member member = Member.from(1L, "eden", "password123", "이든", "USER", 1L);
         ReservationTime time = ReservationTime.from(1L, LocalTime.of(10, 0));
-        Theme theme = Theme.from(1L, "테마", "설명", "url");
+        Theme theme = Theme.from(1L, "테마", "설명", "url", 1L);
         ReservationCreateRequest request = new ReservationCreateRequest(date, 1L, 1L);
         Reservation savedReservation = Reservation.from(generatedId, 1L, date, 1L, 1L);
 

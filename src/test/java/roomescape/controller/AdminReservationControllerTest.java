@@ -79,12 +79,106 @@ public class AdminReservationControllerTest {
                 .body("message", containsString("요청하신 경로를 찾을 수 없습니다"));
     }
 
+    @Test
+    void 매니저는_자기_매장_예약만_조회한다() {
+        createMember(3L, "brown", "브라운");
+        createManager(10L, "gangnam-manager", "강남 매니저", 1L);
+        createTime("10:00");
+        createTheme("강남 테마", "강남점 테마", 1L);
+        createTheme("잠실 테마", "잠실점 테마", 2L);
+        createReservation(reservationParams(Map.of("themeId", 1)));
+        createReservation(reservationParams(Map.of("themeId", 2)));
+
+        RestAssured.given().log().all()
+                .filter(login("gangnam-manager"))
+                .when().get("/api/v1/admin/reservations")
+                .then().log().all()
+                .statusCode(200)
+                .body("size()", is(1))
+                .body("[0].theme.storeId", is(1));
+    }
+
+    @Test
+    void 매니저는_자기_매장_예약을_삭제할_수_있다() {
+        createMember(3L, "brown", "브라운");
+        createManager(10L, "gangnam-manager", "강남 매니저", 1L);
+        createTime("10:00");
+        createTheme("강남 테마", "강남점 테마", 1L);
+        createReservation(reservationParams());
+
+        RestAssured.given().log().all()
+                .filter(login("gangnam-manager"))
+                .when().delete("/api/v1/admin/reservations/1")
+                .then().log().all()
+                .statusCode(204);
+    }
+
+    @Test
+    void 매니저는_다른_매장_예약을_삭제할_수_없다() {
+        createMember(3L, "brown", "브라운");
+        createManager(10L, "gangnam-manager", "강남 매니저", 1L);
+        createTime("10:00");
+        createTheme("잠실 테마", "잠실점 테마", 2L);
+        createReservation(reservationParams());
+
+        RestAssured.given().log().all()
+                .filter(login("gangnam-manager"))
+                .when().delete("/api/v1/admin/reservations/1")
+                .then().log().all()
+                .statusCode(403)
+                .body("errorCode", is("AUTHORIZATION_FAILED"));
+    }
+
+    @Test
+    void 매니저는_자기_매장_예약을_수정할_수_있다() {
+        createMember(3L, "brown", "브라운");
+        createManager(10L, "gangnam-manager", "강남 매니저", 1L);
+        createTime("10:00");
+        createTime("11:00");
+        createTheme("강남 테마", "강남점 테마", 1L);
+        createReservation(reservationParams());
+
+        RestAssured.given().log().all()
+                .filter(login("gangnam-manager"))
+                .contentType(ContentType.JSON)
+                .body(Map.of("date", "2026-12-31", "timeId", 2, "themeId", 1))
+                .when().put("/api/v1/admin/reservations/1")
+                .then().log().all()
+                .statusCode(204);
+    }
+
+    @Test
+    void 매니저는_다른_매장_예약으로_수정할_수_없다() {
+        createMember(3L, "brown", "브라운");
+        createManager(10L, "gangnam-manager", "강남 매니저", 1L);
+        createTime("10:00");
+        createTime("11:00");
+        createTheme("강남 테마", "강남점 테마", 1L);
+        createTheme("잠실 테마", "잠실점 테마", 2L);
+        createReservation(reservationParams());
+
+        RestAssured.given().log().all()
+                .filter(login("gangnam-manager"))
+                .contentType(ContentType.JSON)
+                .body(Map.of("date", "2026-12-31", "timeId", 2, "themeId", 2))
+                .when().put("/api/v1/admin/reservations/1")
+                .then().log().all()
+                .statusCode(403)
+                .body("errorCode", is("AUTHORIZATION_FAILED"));
+    }
+
     private Map<String, Object> reservationParams() {
         Map<String, Object> params = new HashMap<>();
         params.put("memberId", 3);
         params.put("date", "2026-12-31");
         params.put("timeId", 1);
         params.put("themeId", 1);
+        return params;
+    }
+
+    private Map<String, Object> reservationParams(Map<String, Object> overrides) {
+        Map<String, Object> params = reservationParams();
+        params.putAll(overrides);
         return params;
     }
 
@@ -100,10 +194,16 @@ public class AdminReservationControllerTest {
     }
 
     private void createTheme(String name, String description) {
+        createTheme(name, description, 1L);
+    }
+
+    private void createTheme(String name, String description, Long storeId) {
+        createStore(storeId, storeId == 1L ? "강남점" : "잠실점");
         Map<String, Object> themeParams = new HashMap<>();
         themeParams.put("name", name);
         themeParams.put("description", description);
         themeParams.put("imgUrl", "링크~");
+        themeParams.put("storeId", storeId);
 
         RestAssured.given()
                 .filter(adminSession())
@@ -121,9 +221,18 @@ public class AdminReservationControllerTest {
     }
 
     private void createMember(Long id, String loginId, String name) {
+        createStore(1L, "강남점");
         jdbcTemplate.update(
-                "INSERT INTO member (id, login_id, password, name, role) VALUES (?, ?, ?, ?, ?)",
-                id, loginId, "password123", name, "USER"
+                "INSERT INTO member (id, login_id, password, name, role, store_id) VALUES (?, ?, ?, ?, ?, ?)",
+                id, loginId, "password123", name, "USER", 1L
+        );
+    }
+
+    private void createManager(Long id, String loginId, String name, Long storeId) {
+        createStore(storeId, storeId == 1L ? "강남점" : "잠실점");
+        jdbcTemplate.update(
+                "INSERT INTO member (id, login_id, password, name, role, store_id) VALUES (?, ?, ?, ?, ?, ?)",
+                id, loginId, "password123", name, "MANAGER", storeId
         );
     }
 
@@ -133,9 +242,14 @@ public class AdminReservationControllerTest {
     }
 
     private void createAdminMember() {
+        createStore(1L, "강남점");
         jdbcTemplate.update(
-                "MERGE INTO member KEY(id) VALUES (?, ?, ?, ?, ?)",
-                -1L, "admin", "admin123", "관리자", "ADMIN"
+                "MERGE INTO member KEY(id) VALUES (?, ?, ?, ?, ?, ?)",
+                -1L, "admin", "admin123", "관리자", "ADMIN", 1L
         );
+    }
+
+    private void createStore(Long id, String name) {
+        jdbcTemplate.update("MERGE INTO store KEY(id) VALUES (?, ?)", id, name);
     }
 }

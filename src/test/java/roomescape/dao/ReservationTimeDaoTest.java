@@ -1,5 +1,6 @@
 package roomescape.dao;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
@@ -43,10 +44,15 @@ public class ReservationTimeDaoTest {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    @BeforeEach
+    void setUp() {
+        jdbcTemplate.update("MERGE INTO store KEY(id) VALUES (?, ?)", 1L, "강남점");
+    }
+
     @Test
     void 예약에서_사용중인_시간을_삭제하면_예외가_발생한다() {
         Long timeId = reservationTimeDao.insertReservationTime(ReservationTime.from(LocalTime.of(10, 0)));
-        Long themeId = themeDao.insertTheme(Theme.from("이든의 하우스", "설명", "링크"));
+        Long themeId = themeDao.insertTheme(Theme.from("이든의 하우스", "설명", "링크", 1L));
         Long memberId = insertMember("eden", "이든");
         reservationDao.insertReservation(Reservation.from(memberId, LocalDate.of(2026, 5, 6), timeId, themeId));
 
@@ -75,8 +81,8 @@ public class ReservationTimeDaoTest {
 
     private Long insertMember(String loginId, String name) {
         jdbcTemplate.update(
-                "INSERT INTO member (login_id, password, name, role) VALUES (?, ?, ?, ?)",
-                loginId, "password123", name, "USER"
+                "INSERT INTO member (login_id, password, name, role, store_id) VALUES (?, ?, ?, ?, ?)",
+                loginId, "password123", name, "USER", 1L
         );
         return jdbcTemplate.queryForObject("SELECT id FROM member WHERE login_id = ?", Long.class, loginId);
     }

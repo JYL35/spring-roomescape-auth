@@ -22,7 +22,7 @@ public class ThemeService {
 
     @Transactional
     public ThemeResponse createTheme(ThemeCreateRequest request) {
-        Theme theme = Theme.from(request.name(), request.description(), request.imgUrl());
+        Theme theme = Theme.from(request.name(), request.description(), request.imgUrl(), request.storeId());
         Long id = themeDao.insertTheme(theme);
         return ThemeResponse.from(themeDao.findById(id));
     }

@@ -28,7 +28,8 @@ public class ThemeDao {
             resultSet.getLong("id"),
             resultSet.getString("name"),
             resultSet.getString("description"),
-            resultSet.getString("img_url")
+            resultSet.getString("img_url"),
+            resultSet.getLong("store_id")
     );
 
     private final RowMapper<PopularTheme> popularThemeRowMapper = (resultSet, rowNum) -> new PopularTheme(
@@ -69,7 +70,7 @@ public class ThemeDao {
     }
 
     public Long insertTheme(Theme theme) {
-        String sql = "INSERT INTO theme (name, description, img_url) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO theme (name, description, img_url, store_id) VALUES (?, ?, ?, ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         jdbcTemplate.update(connection -> {
@@ -79,6 +80,7 @@ public class ThemeDao {
             preparedStatement.setString(1, theme.getName());
             preparedStatement.setString(2, theme.getDescription());
             preparedStatement.setString(3, theme.getImgUrl());
+            preparedStatement.setLong(4, theme.getStoreId());
             return preparedStatement;
         }, keyHolder);
         return keyHolder.getKey().longValue();

@@ -15,6 +15,7 @@ import roomescape.dto.request.ReservationCreateRequest;
 import roomescape.dto.request.ReservationUpdateRequest;
 import roomescape.dto.response.AvailableTimeResponse;
 import roomescape.dto.response.ReservationResponse;
+import roomescape.exception.AuthorizationException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -46,6 +47,18 @@ public class ReservationService {
         return buildReservationResponses(reservations);
     }
 
+    public List<ReservationResponse> getManageableReservations(Member member) {
+        List<Reservation> reservations = reservationDao.findAllReservations();
+        if (member.isAdmin()) {
+            return buildReservationResponses(reservations);
+        }
+        validateManager(member);
+        List<Reservation> manageableReservations = reservations.stream()
+                .filter(reservation -> canManageReservation(member, reservation))
+                .toList();
+        return buildReservationResponses(manageableReservations);
+    }
+
     @Transactional
     public ReservationResponse createReservation(Long memberId, ReservationCreateRequest request) {
         Reservation reservation = Reservation.from(memberId, request.date(), request.timeId(), request.themeId());
@@ -62,6 +75,14 @@ public class ReservationService {
 
     @Transactional
     public void deleteReservation(Long id) {
+        int deleteCount = reservationDao.delete(id);
+        Reservation.validateDeletion(deleteCount);
+    }
+
+    @Transactional
+    public void deleteManageableReservation(Member member, Long id) {
+        Reservation reservation = reservationDao.findReservationById(id);
+        validateCanManageReservation(member, reservation);
         int deleteCount = reservationDao.delete(id);
         Reservation.validateDeletion(deleteCount);
     }
@@ -101,6 +122,49 @@ public class ReservationService {
         reservation.validateNotPast(LocalDateTime.of(request.date(), time.getStartAt()));
         int updateCount = reservationDao.update(id, reservation);
         Reservation.validateDeletion(updateCount);
+    }
+
+    @Transactional
+    public void updateManageableReservation(Member member, Long id, ReservationUpdateRequest request) {
+        Reservation originalReservation = reservationDao.findReservationById(id);
+        validateCanManageReservation(member, originalReservation);
+
+        ReservationTime time = reservationTimeDao.findById(request.timeId());
+        Theme newTheme = themeDao.findById(request.themeId());
+        validateCanManageStore(member, newTheme.getStoreId());
+
+        Reservation reservation = Reservation.from(
+                id,
+                originalReservation.getMemberId(),
+                request.date(),
+                request.timeId(),
+                request.themeId()
+        );
+        reservation.validateNotPast(LocalDateTime.of(request.date(), time.getStartAt()));
+        int updateCount = reservationDao.update(id, reservation);
+        Reservation.validateDeletion(updateCount);
+    }
+
+    private boolean canManageReservation(Member member, Reservation reservation) {
+        Theme theme = themeDao.findById(reservation.getThemeId());
+        return member.canManageStore(theme.getStoreId());
+    }
+
+    private void validateCanManageReservation(Member member, Reservation reservation) {
+        Theme theme = themeDao.findById(reservation.getThemeId());
+        validateCanManageStore(member, theme.getStoreId());
+    }
+
+    private void validateCanManageStore(Member member, Long storeId) {
+        if (!member.canManageStore(storeId)) {
+            throw new AuthorizationException("해당 매장의 예약에 접근할 권한이 없습니다.");
+        }
+    }
+
+    private void validateManager(Member member) {
+        if (!member.isManager()) {
+            throw new AuthorizationException("예약 관리 권한이 없습니다.");
+        }
     }
 
     private List<ReservationResponse> buildReservationResponses(List<Reservation> reservations) {

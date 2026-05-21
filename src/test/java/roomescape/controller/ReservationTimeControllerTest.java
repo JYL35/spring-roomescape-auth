@@ -48,9 +48,10 @@ public class ReservationTimeControllerTest {
     }
 
     private io.restassured.filter.session.SessionFilter adminSession() {
+        jdbcTemplate.update("MERGE INTO store KEY(id) VALUES (?, ?)", 1L, "강남점");
         jdbcTemplate.update(
-                "MERGE INTO member KEY(id) VALUES (?, ?, ?, ?, ?)",
-                -1L, "admin", "admin123", "관리자", "ADMIN"
+                "MERGE INTO member KEY(id) VALUES (?, ?, ?, ?, ?, ?)",
+                -1L, "admin", "admin123", "관리자", "ADMIN", 1L
         );
         return adminLogin();
     }
